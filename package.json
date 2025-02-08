@@ -1,0 +1,38 @@
+{
+  "name": "stock-backtest",
+  "private": true,
+  "version": "0.0.1",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@types/vue": "^2.0.0",
+    "axios": "^1.7.9",
+    "chart.js": "^4.4.7",
+    "dayjs": "^1.11.13",
+    "echarts": "^5.6.0",
+    "pinia": "^2.3.0",
+    "vant": "^4.9.15",
+    "vue": "^3.5.13"
+  },
+  "devDependencies": {
+    "@types/node": "^18.19.71",
+    "@vitejs/plugin-vue": "^4.6.2",
+    "@vue/compiler-sfc": "^3.4.21",
+    "@vue/runtime-core": "^3.5.13",
+    "@vue/tsconfig": "^0.4.0",
+    "sass": "^1.83.4",
+    "typescript": "^5.3.0",
+    "unplugin-vue-components": "^0.25.2",
+    "vite": "^4.5.5",
+    "vue-tsc": "^1.8.27"
+  },
+  "description": "一个简单易用的股票策略回测H5应用，让无编程经验的投资者也能快速验证自己的交易策略。",
+  "main": "index.js",
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}

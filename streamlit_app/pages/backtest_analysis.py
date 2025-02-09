@@ -203,8 +203,11 @@ def render_trades_tab(results, config):
         # 创建K线图
         st.subheader("交易K线图")
         
-        # 创建图表
-        fig = go.Figure()
+        # 创建子图
+        fig = make_subplots(rows=2, cols=1, 
+                            shared_xaxes=True,
+                            vertical_spacing=0.03,
+                            row_heights=[0.7, 0.3])
         
         # 添加K线数据
         fig.add_trace(go.Candlestick(
@@ -216,7 +219,7 @@ def render_trades_tab(results, config):
             name="K线",
             increasing_line_color='red',  # 上涨为红色
             decreasing_line_color='green'  # 下跌为绿色
-        ))
+        ), row=1, col=1)
         
         # 添加MA5
         fig.add_trace(go.Scatter(
@@ -224,7 +227,7 @@ def render_trades_tab(results, config):
             y=stock_data['MA5'],
             name="MA5",
             line=dict(color='blue', width=1)
-        ))
+        ), row=1, col=1)
         
         # 添加MA20
         fig.add_trace(go.Scatter(
@@ -232,7 +235,7 @@ def render_trades_tab(results, config):
             y=stock_data['MA20'],
             name="MA20",
             line=dict(color='purple', width=1)
-        ))
+        ), row=1, col=1)
         
         # 添加买入点
         buy_trades = trades[trades['type'] == '买入']
@@ -248,7 +251,7 @@ def render_trades_tab(results, config):
                     line=dict(width=2)
                 ),
                 name="买入"
-            ))
+            ), row=1, col=1)
         
         # 添加卖出点
         sell_trades = trades[trades['type'] == '卖出']
@@ -264,13 +267,30 @@ def render_trades_tab(results, config):
                     line=dict(width=2)
                 ),
                 name="卖出"
-            ))
+            ), row=1, col=1)
+        
+        # 添加成交量图表
+        fig.add_trace(go.Bar(
+            x=stock_data.index,
+            y=stock_data['volume'],
+            name="成交量",
+            marker_color=np.where(stock_data['close'] >= stock_data['open'], 'red', 'green')
+        ), row=2, col=1)
         
         # 更新布局
         fig.update_layout(
-            height=600,
+            height=800,
             showlegend=True,
-            xaxis_rangeslider_visible=True,  # 保留底部的范围滑块
+            xaxis_rangeslider_visible=False,  # 禁用K线图的滑块
+            xaxis2_rangeslider_visible=True,  # 启用成交量图的滑块
+        )
+        
+        # 更新Y轴标题
+        fig.update_yaxes(title_text="价格", row=1, col=1)
+        fig.update_yaxes(title_text="成交量", row=2, col=1)
+        
+        # 更新图例位置
+        fig.update_layout(
             legend=dict(
                 yanchor="top",
                 y=0.99,
@@ -278,9 +298,6 @@ def render_trades_tab(results, config):
                 x=0.01
             )
         )
-        
-        # 更新Y轴标题
-        fig.update_yaxes(title_text="价格")
         
         # 显示图表
         st.plotly_chart(fig, use_container_width=True)

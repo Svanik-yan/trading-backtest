@@ -42,7 +42,7 @@ with st.sidebar:
     selected = option_menu(
         menu_title="主菜单",
         options=[
-            "实时行情", 
+            "实时行情（开发中）", 
             "K线图表",
             "策略配置",
             "回测分析",
@@ -58,7 +58,7 @@ with st.sidebar:
             "pie-chart"
         ],
         menu_icon="cast",
-        default_index=0,
+        default_index=1,  # 默认选中K线图表
         styles={
             "container": {"padding": "0!important", "background-color": "#fafafa"},
             "icon": {"color": "orange", "font-size": "25px"}, 
@@ -70,9 +70,9 @@ with st.sidebar:
 # 主页面内容
 st.title("股票策略回测系统")
 
-if selected == "实时行情":
-    from pages.realtime_quote import render_realtime_quote
-    render_realtime_quote()
+if selected == "实时行情（开发中）":
+    st.warning("实时行情模块正在开发中，敬请期待...")
+    st.info("您可以先使用K线图表查看历史数据，或使用其他功能。")
     
 elif selected == "K线图表":
     from pages.kline_chart import render_kline_chart

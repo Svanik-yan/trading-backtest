@@ -139,8 +139,26 @@ class DataLoader:
             # 从本地文件加载
             df = pd.read_csv(file_path, sep='\t')
             if not df.empty:
+                # 确保所需的列都存在
+                required_columns = ['trade_date', 'open', 'high', 'low', 'close', 'vol', 'amount']
+                if not all(col in df.columns for col in required_columns):
+                    return self._generate_sample_data(stock_code)
+                
+                # 重命名 volume 列
+                if 'volume' in df.columns:
+                    df = df.rename(columns={'volume': 'vol'})
+                
+                # 转换日期格式
                 df['trade_date'] = pd.to_datetime(df['trade_date'])
+                
+                # 确保数值列为浮点数
+                numeric_columns = ['open', 'high', 'low', 'close', 'vol', 'amount']
+                for col in numeric_columns:
+                    df[col] = pd.to_numeric(df[col], errors='coerce')
+                
+                # 按日期排序
                 df = df.sort_values('trade_date')
+                
                 return df
             
             return self._generate_sample_data(stock_code)

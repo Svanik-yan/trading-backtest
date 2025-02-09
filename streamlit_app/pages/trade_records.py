@@ -235,16 +235,119 @@ def render_trade_records():
         
         # 格式化数据用于显示
         display_trades = filtered_trades.copy()
-        display_trades['date'] = pd.to_datetime(display_trades['date']).dt.strftime('%Y-%m-%d')
-        display_trades['price'] = display_trades['price'].apply(lambda x: f"¥{x:,.4f}")
-        display_trades['amount'] = display_trades['amount'].apply(lambda x: f"¥{x:,.2f}")
-        display_trades['commission'] = display_trades['commission'].apply(lambda x: f"¥{x:,.2f}")
-        display_trades['profit'] = display_trades['profit'].apply(lambda x: f"¥{x:,.2f}")
         
-        # 显示交易记录
+        # 添加样式
+        st.markdown("""
+        <style>
+        [data-testid="stDataFrame"] td:nth-child(1) {
+            font-weight: bold;
+        }
+        [data-testid="stDataFrame"] td:nth-child(1):contains("买入") {
+            color: #ff4b4b !important;
+        }
+        [data-testid="stDataFrame"] td:nth-child(1):contains("卖出") {
+            color: #00c853 !important;
+        }
+        [data-testid="stDataFrame"] td {
+            text-align: right;
+        }
+        [data-testid="stDataFrame"] th {
+            text-align: center;
+            background-color: #f0f2f6;
+        }
+        </style>
+        """, unsafe_allow_html=True)
+        
+        # 重命名列以匹配所需格式
+        display_trades = display_trades.rename(columns={
+            'date': '交易时间',
+            'type': '交易类型',
+            'price': '价格',
+            'volume': '数量',
+            'amount': '金额',
+            'profit': '收益率'
+        })
+        
+        # 格式化数据
+        display_trades['交易时间'] = pd.to_datetime(display_trades['交易时间']).dt.strftime('%Y-%m-%d %H:%M:%S')
+        display_trades['价格'] = display_trades['价格'].apply(lambda x: f"{x:.2f}")
+        display_trades['数量'] = display_trades['数量'].apply(lambda x: f"{x:,.0f}")  # 整数显示
+        display_trades['金额'] = display_trades['金额'].apply(lambda x: f"¥{x:,.2f}")
+        
+        # 计算收益率和总资产
+        current_equity = config['initial_capital']
+        for idx, row in display_trades.iterrows():
+            if row['交易类型'] == '买入':
+                current_equity -= float(row['amount'].replace('¥', '').replace(',', ''))
+            else:
+                profit = float(row['profit'])
+                current_equity += profit
+            display_trades.at[idx, '总资产'] = current_equity
+            
+            # 计算增长率
+            if idx > 0:
+                prev_equity = float(display_trades.at[idx-1, '总资产'])
+                growth_rate = ((current_equity - prev_equity) / prev_equity * 100) if prev_equity != 0 else 0.0
+                display_trades.at[idx, '增长率'] = growth_rate
+            else:
+                display_trades.at[idx, '增长率'] = 0.0
+        
+        # 格式化收益率、增长率和总资产显示
+        display_trades['收益率'] = display_trades.apply(
+            lambda row: f"{(float(row['profit']) / float(row['amount'].replace('¥', '').replace(',', '')) * 100):.2f}%" if row['交易类型'] == '卖出' else "0.00%",
+            axis=1
+        )
+        display_trades['增长率'] = display_trades['增长率'].apply(lambda x: f"{x:.2f}%")
+        display_trades['总资产'] = display_trades['总资产'].apply(lambda x: f"¥{x:,.2f}")
+        
+        # 设置列顺序
+        columns_order = ['交易类型', '价格', '数量', '金额', '收益率', '增长率', '总资产', '交易时间']
+        display_trades = display_trades[columns_order]
+        
+        # 使用st.dataframe显示表格，添加样式
         st.dataframe(
             display_trades,
-            use_container_width=True
+            use_container_width=True,
+            hide_index=True,
+            column_config={
+                "交易类型": st.column_config.Column(
+                    width="small",
+                    help="买入或卖出交易",
+                ),
+                "价格": st.column_config.NumberColumn(
+                    width="small",
+                    help="交易价格",
+                    format="%.2f"
+                ),
+                "数量": st.column_config.NumberColumn(
+                    width="medium",
+                    help="交易数量",
+                    format=",d"
+                ),
+                "金额": st.column_config.NumberColumn(
+                    width="medium",
+                    help="交易金额",
+                    format="¥%,.2f"
+                ),
+                "收益率": st.column_config.Column(
+                    width="small",
+                    help="交易收益率"
+                ),
+                "增长率": st.column_config.Column(
+                    width="small",
+                    help="总资产增长率"
+                ),
+                "总资产": st.column_config.NumberColumn(
+                    width="medium",
+                    help="交易后总资产",
+                    format="¥%,.2f"
+                ),
+                "交易时间": st.column_config.DatetimeColumn(
+                    width="medium",
+                    help="交易发生时间",
+                    format="YYYY-MM-DD HH:mm:ss"
+                )
+            }
         )
         
         # 导出功能

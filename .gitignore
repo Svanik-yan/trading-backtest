@@ -49,6 +49,8 @@ ENV/
 *.txt
 !requirements.txt
 !stock_list.txt
+!public/daily_stock_data/*.txt
+!public/metadata/*.txt
 
 # Streamlit
 .streamlit/

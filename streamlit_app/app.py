@@ -41,7 +41,7 @@ st.markdown("""
 with st.sidebar:
     # 定义页面选项
     options = [
-        "实时行情（开发中）", 
+        "实时回测（开发中）", 
         "策略配置",
         "回测分析"
     ]
@@ -73,8 +73,8 @@ with st.sidebar:
 # 主页面内容
 st.title("股票策略回测系统")
 
-if selected == "实时行情（开发中）":
-    st.info("实时行情模块正在开发中，敬请期待...")
+if selected == "实时回测（开发中）":
+    st.info("实时回测模块正在开发中，敬请期待...")
     
 elif selected == "策略配置":
     from pages.strategy_config import render_strategy_config

@@ -64,6 +64,13 @@ def render_strategy_config():
                 value=0.0002,
                 format="%0.4f"
             )
+            
+            # 成交价格设置
+            price_type = st.radio(
+                "成交价格",
+                ["收盘价", "开盘价"],
+                index=0  # 默认使用收盘价
+            )
         
         # 策略参数设置
         st.subheader("策略参数")
@@ -73,6 +80,54 @@ def render_strategy_config():
             "策略类型",
             ["双均线交叉", "MACD金叉死叉", "RSI超买超卖", "布林带突破"]
         )
+        
+        # 买入条件和卖出条件设置
+        st.subheader("交易条件")
+        buy_col, sell_col = st.columns(2)
+        
+        with buy_col:
+            st.markdown("##### 买入条件")
+            
+            # 技术指标选择（买入）
+            buy_indicators = st.multiselect(
+                "选择技术指标",
+                ["MACD金叉", "RSI超卖", "MA交叉向上", "布林带下轨"],
+                key="buy_indicators"
+            )
+            
+            # 添加指标的逻辑关系
+            if len(buy_indicators) > 1:
+                buy_logic = st.radio(
+                    "条件关系",
+                    ["AND (所有条件都满足)", "OR (满足任意条件)"],
+                    key="buy_logic"
+                )
+            
+            # 添加自定义条件按钮
+            if st.button("添加自定义条件", key="add_buy_condition"):
+                st.text_input("自定义买入条件", key="custom_buy_condition")
+        
+        with sell_col:
+            st.markdown("##### 卖出条件")
+            
+            # 技术指标选择（卖出）
+            sell_indicators = st.multiselect(
+                "选择技术指标",
+                ["MACD死叉", "RSI超买", "MA交叉向下", "布林带上轨"],
+                key="sell_indicators"
+            )
+            
+            # 添加指标的逻辑关系
+            if len(sell_indicators) > 1:
+                sell_logic = st.radio(
+                    "条件关系",
+                    ["AND (所有条件都满足)", "OR (满足任意条件)"],
+                    key="sell_logic"
+                )
+            
+            # 添加自定义条件按钮
+            if st.button("添加自定义条件", key="add_sell_condition"):
+                st.text_input("自定义卖出条件", key="custom_sell_condition")
         
         # 根据策略类型显示不同的参数设置
         if strategy_type == "双均线交叉":
@@ -132,8 +187,19 @@ def render_strategy_config():
                 "initial_capital": initial_capital,
                 "commission_rate": commission_rate,
                 "slippage": slippage,
+                "price_type": price_type,
                 "strategy_type": strategy_type,
-                "position_type": position_type
+                "position_type": position_type,
+                "buy_conditions": {
+                    "indicators": buy_indicators,
+                    "logic": buy_logic if len(buy_indicators) > 1 else None,
+                    "custom": st.session_state.get("custom_buy_condition", "")
+                },
+                "sell_conditions": {
+                    "indicators": sell_indicators,
+                    "logic": sell_logic if len(sell_indicators) > 1 else None,
+                    "custom": st.session_state.get("custom_sell_condition", "")
+                }
             }
             
             # 根据策略类型添加特定参数

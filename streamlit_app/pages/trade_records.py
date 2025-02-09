@@ -68,6 +68,66 @@ def render_trade_records():
             
         trades = pd.DataFrame(results['trades'])
         
+        # 绘制K线图和交易点
+        st.subheader("交易K线图")
+        
+        # 创建K线图
+        fig = go.Figure()
+        
+        # 添加K线数据
+        fig.add_trace(go.Candlestick(
+            x=data.index,
+            open=data['open'],
+            high=data['high'],
+            low=data['low'],
+            close=data['close'],
+            name="K线"
+        ))
+        
+        # 添加买入点
+        buy_trades = trades[trades['type'] == '买入']
+        if not buy_trades.empty:
+            fig.add_trace(go.Scatter(
+                x=pd.to_datetime(buy_trades['date']),
+                y=buy_trades['price'],
+                mode='markers',
+                marker=dict(
+                    symbol='triangle-up',
+                    size=12,
+                    color='red',
+                    line=dict(width=2)
+                ),
+                name="买入点"
+            ))
+        
+        # 添加卖出点
+        sell_trades = trades[trades['type'] == '卖出']
+        if not sell_trades.empty:
+            fig.add_trace(go.Scatter(
+                x=pd.to_datetime(sell_trades['date']),
+                y=sell_trades['price'],
+                mode='markers',
+                marker=dict(
+                    symbol='triangle-down',
+                    size=12,
+                    color='green',
+                    line=dict(width=2)
+                ),
+                name="卖出点"
+            ))
+        
+        # 更新布局
+        fig.update_layout(
+            title=f"{config['stock_code']} K线图与交易点",
+            yaxis_title="价格",
+            xaxis_title="日期",
+            height=600,
+            xaxis_rangeslider_visible=False
+        )
+        
+        # 显示图表
+        st.plotly_chart(fig, use_container_width=True)
+        
         # 交易统计
         st.subheader("交易统计")
         col1, col2, col3, col4 = st.columns(4)
@@ -143,26 +203,6 @@ def render_trade_records():
             display_trades,
             use_container_width=True
         )
-        
-        # 收益分布图
-        st.subheader("收益分布")
-        fig = go.Figure()
-        
-        fig.add_trace(go.Box(
-            y=filtered_trades['profit'],
-            name="收益分布",
-            boxpoints='all',
-            jitter=0.3,
-            pointpos=-1.8
-        ))
-        
-        fig.update_layout(
-            title="交易收益分布",
-            yaxis_title="收益(¥)",
-            showlegend=False
-        )
-        
-        st.plotly_chart(fig, use_container_width=True)
         
         # 导出功能
         if st.button("导出交易记录"):

@@ -182,23 +182,29 @@ def render_strategy_config():
                         if stock_data is not None and not stock_data.empty:
                             # 获取开始日期最近的收盘价
                             start_date_str = start_date.strftime('%Y-%m-%d')
-                            closest_price = stock_data[stock_data['trade_date'] >= start_date_str]['close'].iloc[0]
+                            filtered_data = stock_data[stock_data['trade_date'] >= start_date_str]
                             
-                            # 计算最大可交易手数
-                            # 考虑手续费和滑点的成本
-                            total_cost_rate = commission_rate + slippage
-                            max_volume = int((initial_capital * (1 - total_cost_rate)) / (closest_price * 100)) * 100
-                            
-                            fixed_volume = st.number_input(
-                                "每次交易手数（自动计算）",
-                                min_value=100,
-                                value=max_volume,
-                                step=100,
-                                disabled=True
-                            )
-                            st.caption(f"基于初始资金 {initial_capital:,.0f} 元")
-                            st.caption(f"最近交易日收盘价 {closest_price:.2f} 元")
-                            st.caption(f"考虑成本后可交易 {max_volume:,d} 股")
+                            if filtered_data.empty:
+                                st.error(f"在{start_date_str}之后没有找到交易数据，请选择更早的开始日期")
+                                fixed_volume = 100
+                            else:
+                                closest_price = filtered_data['close'].iloc[0]
+                                
+                                # 计算最大可交易手数
+                                # 考虑手续费和滑点的成本
+                                total_cost_rate = commission_rate + slippage
+                                max_volume = int((initial_capital * (1 - total_cost_rate)) / (closest_price * 100)) * 100
+                                
+                                fixed_volume = st.number_input(
+                                    "每次交易手数（自动计算）",
+                                    min_value=100,
+                                    value=max_volume,
+                                    step=100,
+                                    disabled=True
+                                )
+                                st.caption(f"基于初始资金 {initial_capital:,.0f} 元")
+                                st.caption(f"最近交易日收盘价 {closest_price:.2f} 元")
+                                st.caption(f"考虑成本后可交易 {max_volume:,d} 股")
                         else:
                             st.error("无法获取股票数据，请检查股票代码或选择其他股票")
                             fixed_volume = 100

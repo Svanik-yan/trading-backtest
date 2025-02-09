@@ -29,8 +29,8 @@ class DataLoader:
             # 合并股票列表
             all_stocks = sh_stocks + sz_stocks
             
-            # 保存到文件
-            stock_list_path = Path("stock_list.txt")
+            # 保存到public目录下的stock_list.txt
+            stock_list_path = self.base_dir / "stock_list.txt"
             with open(stock_list_path, 'w', encoding='utf-8') as f:
                 json.dump({
                     'msg': '操作成功',
@@ -56,8 +56,8 @@ class DataLoader:
             search_text (str, optional): 搜索文本，可以是股票代码或名称. Defaults to None.
         """
         try:
-            # 从根目录下的stock_list.txt加载
-            stock_list_path = Path("stock_list.txt")
+            # 从public目录下的stock_list.txt加载
+            stock_list_path = self.base_dir / "stock_list.txt"
             
             # 如果文件不存在或为空，尝试重新获取
             if not stock_list_path.exists() or stock_list_path.stat().st_size == 0:

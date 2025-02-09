@@ -21,12 +21,16 @@ class DataLoader:
             # 从public目录下的stock_list.txt加载
             stock_list_path = self.base_dir / "stock_list.txt"
             if stock_list_path.exists():
-                df = pd.read_csv(stock_list_path)
-                if not df.empty:
-                    # 确保数据包含必要的列
-                    required_columns = ['ts_code', 'symbol', 'name']
-                    if all(col in df.columns for col in required_columns):
-                        return df
+                # 读取JSON格式的文件
+                df = pd.read_json(stock_list_path)
+                if 'data' in df.columns:
+                    # 提取data字段中的股票列表
+                    stock_list = pd.DataFrame(df['data'].iloc[0])
+                    if not stock_list.empty:
+                        # 确保数据包含必要的列
+                        required_columns = ['ts_code', 'symbol', 'name']
+                        if all(col in stock_list.columns for col in required_columns):
+                            return stock_list
             
             st.warning(f"未找到股票列表文件或文件格式不正确: {stock_list_path}")
             # 如果本地文件不存在或为空，返回示例数据

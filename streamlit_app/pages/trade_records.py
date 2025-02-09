@@ -3,6 +3,7 @@ import pandas as pd
 import plotly.graph_objects as go
 from datetime import datetime
 from utils.data_loader import DataLoader
+from strategies.implementations import create_strategy
 
 def render_trade_records():
     st.title("交易记录")
@@ -19,16 +20,53 @@ def render_trade_records():
         st.subheader("策略信息")
         st.info(f"股票: {config['stock_code']} | 策略: {config['strategy_type']} | 周期: {config['start_date'].strftime('%Y-%m-%d')} 至 {config['end_date'].strftime('%Y-%m-%d')}")
         
-        # 模拟生成交易记录
-        trades = pd.DataFrame({
-            'trade_date': pd.date_range(start=config['start_date'], end=config['end_date'], freq='B')[:20],
-            'type': ['买入', '卖出'] * 10,
-            'price': [100 + i * 0.1 for i in range(20)],
-            'volume': [100] * 20,
-            'amount': [10000 + i * 10 for i in range(20)],
-            'commission': [30] * 20,
-            'profit': [-30] + [100 * (i % 5) for i in range(19)]
-        })
+        # 加载数据并运行策略获取交易记录
+        loader = DataLoader()
+        stock_code = config['stock_code'].split('.')[0]
+        data = loader.load_daily_data(stock_code)
+        
+        if data is None or data.empty:
+            st.error("无法加载股票数据，请检查股票代码是否正确")
+            return
+            
+        # 确保数据按日期排序
+        data = data.sort_values('trade_date')
+        data.set_index('trade_date', inplace=True)
+        
+        # 准备策略参数
+        strategy_params = {
+            'initial_capital': config['initial_capital'],
+            'commission_rate': config['commission_rate'],
+            'slippage': config['slippage'],
+            'price_type': config['price_type']
+        }
+        
+        # 添加特定策略的参数
+        if 'strategy_params' in config:
+            strategy_params.update(config['strategy_params'])
+            
+        # 添加仓位管理参数
+        if 'position_params' in config:
+            strategy_params.update(config['position_params'])
+            
+        # 添加交易条件
+        strategy_params['buy_conditions'] = config.get('buy_conditions', {})
+        strategy_params['sell_conditions'] = config.get('sell_conditions', {})
+        
+        # 创建并运行策略
+        strategy = create_strategy(
+            config['strategy_type'],
+            data,
+            **strategy_params
+        )
+        
+        results = strategy.run_backtest()
+        
+        if not results or 'trades' not in results or not results['trades']:
+            st.warning("没有找到交易记录")
+            return
+            
+        trades = pd.DataFrame(results['trades'])
         
         # 交易统计
         st.subheader("交易统计")
@@ -84,18 +122,18 @@ def render_trade_records():
         
         # 应用排序
         if sort_by == '按时间降序':
-            filtered_trades = filtered_trades.sort_values('trade_date', ascending=False)
+            filtered_trades = filtered_trades.sort_values('date', ascending=False)
         elif sort_by == '按时间升序':
-            filtered_trades = filtered_trades.sort_values('trade_date', ascending=True)
+            filtered_trades = filtered_trades.sort_values('date', ascending=True)
         elif sort_by == '按收益降序':
             filtered_trades = filtered_trades.sort_values('profit', ascending=False)
         else:
             filtered_trades = filtered_trades.sort_values('profit', ascending=True)
         
-        # 格式化数据
+        # 格式化数据用于显示
         display_trades = filtered_trades.copy()
-        display_trades['trade_date'] = display_trades['trade_date'].dt.strftime('%Y-%m-%d')
-        display_trades['price'] = display_trades['price'].apply(lambda x: f"¥{x:,.2f}")
+        display_trades['date'] = pd.to_datetime(display_trades['date']).dt.strftime('%Y-%m-%d')
+        display_trades['price'] = display_trades['price'].apply(lambda x: f"¥{x:,.4f}")
         display_trades['amount'] = display_trades['amount'].apply(lambda x: f"¥{x:,.2f}")
         display_trades['commission'] = display_trades['commission'].apply(lambda x: f"¥{x:,.2f}")
         display_trades['profit'] = display_trades['profit'].apply(lambda x: f"¥{x:,.2f}")
@@ -130,7 +168,7 @@ def render_trade_records():
         if st.button("导出交易记录"):
             # 转换日期格式为字符串
             export_trades = filtered_trades.copy()
-            export_trades['trade_date'] = export_trades['trade_date'].dt.strftime('%Y-%m-%d')
+            export_trades['date'] = pd.to_datetime(export_trades['date']).dt.strftime('%Y-%m-%d')
             csv = export_trades.to_csv(index=False)
             st.download_button(
                 label="下载CSV文件",

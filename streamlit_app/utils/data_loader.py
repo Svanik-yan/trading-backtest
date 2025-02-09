@@ -69,9 +69,14 @@ class DataLoader:
                 data = json.load(f)
                 if data['code'] == 200 and data['data']:
                     stock_list = pd.DataFrame(data['data'])
+                    # 修改交易所代码映射
+                    exchange_map = {
+                        'XSHE': 'SZ',
+                        'XSHG': 'SH'
+                    }
                     # 转换列名以匹配所需格式
                     stock_list['ts_code'] = stock_list.apply(
-                        lambda x: f"{x['ticker']}.{x['exchange_code'][-2:]}", axis=1
+                        lambda x: f"{x['ticker']}.{exchange_map[x['exchange_code']]}", axis=1
                     )
                     stock_list['symbol'] = stock_list['ticker']
                     

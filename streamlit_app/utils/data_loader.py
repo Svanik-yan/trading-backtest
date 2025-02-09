@@ -17,13 +17,17 @@ class DataLoader:
     def load_stock_list(self):
         """加载股票列表"""
         try:
-            # 从本地文件加载
-            stock_list_path = Path("stock_list.txt")
+            # 从public目录下的stock_list.txt加载
+            stock_list_path = Path("public/stock_list.txt")
             if stock_list_path.exists():
                 df = pd.read_csv(stock_list_path)
                 if not df.empty:
-                    return df
+                    # 确保数据包含必要的列
+                    required_columns = ['ts_code', 'symbol', 'name']
+                    if all(col in df.columns for col in required_columns):
+                        return df
             
+            st.warning("未找到股票列表文件或文件格式不正确")
             # 如果本地文件不存在或为空，返回示例数据
             return pd.DataFrame({
                 'ts_code': ['000001.SZ', '600000.SH'],

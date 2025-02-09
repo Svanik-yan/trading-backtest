@@ -1,69 +1,148 @@
 import pandas as pd
 import numpy as np
 from pathlib import Path
-import tushare as ts
+import requests
+import json
 from datetime import datetime, timedelta
 import streamlit as st
 import time
+import os
 
 class DataLoader:
     def __init__(self, data_dir="public/daily_stock_data"):
         """初始化数据加载器"""
         self.data_dir = Path(data_dir)
         self.base_dir = self.data_dir.parent  # public目录
+        self.api_token = '750ad66d1a5440e5884dcfb6379ab147'
+        self.base_url = 'https://tsanghi.com/api/fin/stock'
         
         # 确保数据目录存在
         self.data_dir.mkdir(parents=True, exist_ok=True)
         
+    def fetch_stock_list(self):
+        """从API获取股票列表"""
+        try:
+            # 获取上海和深圳的股票列表
+            sh_stocks = self._get_exchange_stocks('XSHG')  # 上海证券交易所
+            sz_stocks = self._get_exchange_stocks('XSHE')  # 深圳证券交易所
+            
+            # 合并股票列表
+            all_stocks = sh_stocks + sz_stocks
+            
+            # 保存到文件
+            stock_list_path = Path("stock_list.txt")
+            with open(stock_list_path, 'w', encoding='utf-8') as f:
+                json.dump({
+                    'msg': '操作成功',
+                    'code': 200,
+                    'data': all_stocks
+                }, f, ensure_ascii=False, indent=2)
+            
+            return True
+        except Exception as e:
+            st.error(f"获取股票列表失败: {str(e)}")
+            return False
+            
+    def _get_exchange_stocks(self, exchange):
+        """获取指定交易所的股票列表"""
+        url = f"{self.base_url}/{exchange}/list?token={self.api_token}"
+        response = requests.get(url)
+        return response.json()['data'] if response.json()['code'] == 200 else []
+        
     def load_stock_list(self):
         """加载股票列表"""
         try:
-            # 从public目录下的stock_list.txt加载
-            stock_list_path = self.base_dir / "stock_list.txt"
-            if stock_list_path.exists():
-                # 读取JSON格式的文件
-                df = pd.read_json(stock_list_path)
-                if 'data' in df.columns:
-                    # 提取data字段中的股票列表
-                    stock_list = pd.DataFrame(df['data'].iloc[0])
-                    if not stock_list.empty:
-                        # 确保数据包含必要的列
-                        required_columns = ['ts_code', 'symbol', 'name']
-                        if all(col in stock_list.columns for col in required_columns):
-                            return stock_list
+            # 从根目录下的stock_list.txt加载
+            stock_list_path = Path("stock_list.txt")
             
-            st.warning(f"未找到股票列表文件或文件格式不正确: {stock_list_path}")
-            # 如果本地文件不存在或为空，返回示例数据
-            return pd.DataFrame({
-                'ts_code': ['000001.SZ', '600000.SH'],
-                'symbol': ['000001', '600000'],
-                'name': ['平安银行', '浦发银行'],
-                'list_date': ['1991-04-03', '1999-11-10']
-            })
+            # 如果文件不存在或为空，尝试重新获取
+            if not stock_list_path.exists() or stock_list_path.stat().st_size == 0:
+                if not self.fetch_stock_list():
+                    return self._get_default_stock_list()
+            
+            # 读取JSON格式的文件
+            with open(stock_list_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                if data['code'] == 200 and data['data']:
+                    stock_list = pd.DataFrame(data['data'])
+                    # 转换列名以匹配所需格式
+                    stock_list['ts_code'] = stock_list.apply(
+                        lambda x: f"{x['ticker']}.{x['exchange_code'][-2:]}", axis=1
+                    )
+                    stock_list['symbol'] = stock_list['ticker']
+                    
+                    # 只保留活跃的股票
+                    stock_list = stock_list[stock_list['is_active'] == 1]
+                    
+                    # 选择所需的列
+                    return stock_list[['ts_code', 'symbol', 'name']]
+            
+            return self._get_default_stock_list()
         except Exception as e:
             st.error(f"加载股票列表失败: {str(e)}")
-            # 返回示例数据
-            return pd.DataFrame({
-                'ts_code': ['000001.SZ', '600000.SH'],
-                'symbol': ['000001', '600000'],
-                'name': ['平安银行', '浦发银行'],
-                'list_date': ['1991-04-03', '1999-11-10']
-            })
+            return self._get_default_stock_list()
+            
+    def _get_default_stock_list(self):
+        """返回默认的股票列表"""
+        return pd.DataFrame({
+            'ts_code': ['000001.SZ', '600000.SH'],
+            'symbol': ['000001', '600000'],
+            'name': ['平安银行', '浦发银行']
+        })
+            
+    def fetch_daily_data(self, ts_code):
+        """从API获取股票日线数据"""
+        try:
+            token = os.getenv('VITE_TUSHARE_TOKEN')
+            url = 'http://api.tushare.pro'
+            params = {
+                'api_name': 'daily',
+                'token': token,
+                'params': {
+                    'ts_code': ts_code,
+                    'freq': 'D',
+                    'asset': 'E'
+                }
+            }
+            response = requests.post(url, json=params)
+            result = response.json()
+            
+            if result['code'] == 0 and result['data']['items']:
+                # 保存数据
+                filename = self.data_dir / f"{ts_code.split('.')[0]}.txt"
+                with open(filename, 'w', encoding='utf-8') as f:
+                    # 写入表头
+                    fields = result['data']['fields']
+                    f.write('\t'.join(fields) + '\n')
+                    
+                    # 写入数据
+                    for item in result['data']['items']:
+                        f.write('\t'.join(str(x) for x in item) + '\n')
+                
+                return True
+            return False
+        except Exception as e:
+            st.error(f"获取股票日线数据失败: {str(e)}")
+            return False
             
     def load_daily_data(self, stock_code):
         """加载单个股票的日线数据"""
         try:
             file_path = self.data_dir / f"{stock_code}.txt"
             
-            # 从本地文件加载
-            if file_path.exists():
-                df = pd.read_csv(file_path)
-                if not df.empty:
-                    df['trade_date'] = pd.to_datetime(df['trade_date'])
-                    df = df.sort_values('trade_date')
-                    return df
+            # 如果文件不存在，尝试获取数据
+            if not file_path.exists():
+                ts_code = f"{stock_code}.SH" if stock_code.startswith('6') else f"{stock_code}.SZ"
+                if not self.fetch_daily_data(ts_code):
+                    return self._generate_sample_data(stock_code)
             
-            # 如果本地文件不存在或为空，返回示例数据
+            # 从本地文件加载
+            df = pd.read_csv(file_path, sep='\t')
+            if not df.empty:
+                df['trade_date'] = pd.to_datetime(df['trade_date'])
+                df = df.sort_values('trade_date')
+                return df
+            
             return self._generate_sample_data(stock_code)
                 
         except Exception as e:

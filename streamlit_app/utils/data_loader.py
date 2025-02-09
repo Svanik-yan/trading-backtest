@@ -10,13 +10,6 @@ class DataLoader:
     def __init__(self, data_dir="public/daily_stock_data"):
         """初始化数据加载器"""
         self.data_dir = Path(data_dir)
-        try:
-            self.ts_token = st.secrets["tushare"]["token"]
-        except:
-            self.ts_token = "7a704330a5be992e1a89736e558f1fe72b5329f3696824e994037be0"
-        
-        ts.set_token(self.ts_token)
-        self.pro = ts.pro_api()
         
         # 确保数据目录存在
         self.data_dir.mkdir(parents=True, exist_ok=True)
@@ -24,29 +17,20 @@ class DataLoader:
     def load_stock_list(self):
         """加载股票列表"""
         try:
-            # 首先尝试从本地文件加载
-            stock_list_path = self.data_dir / "stock_list.txt"
+            # 从本地文件加载
+            stock_list_path = Path("stock_list.txt")
             if stock_list_path.exists():
                 df = pd.read_csv(stock_list_path)
                 if not df.empty:
                     return df
             
-            # 如果本地文件不存在或为空，从API获取
-            time.sleep(1)  # 添加延迟避免频繁调用
-            df = self.pro.stock_basic(exchange='', list_status='L')
-            
-            if not df.empty:
-                # 保存到本地文件
-                df.to_csv(stock_list_path, index=False)
-                return df
-            else:
-                # 如果API调用失败，返回一些示例数据
-                return pd.DataFrame({
-                    'ts_code': ['000001.SZ', '600000.SH'],
-                    'symbol': ['000001', '600000'],
-                    'name': ['平安银行', '浦发银行'],
-                    'list_date': ['1991-04-03', '1999-11-10']
-                })
+            # 如果本地文件不存在或为空，返回示例数据
+            return pd.DataFrame({
+                'ts_code': ['000001.SZ', '600000.SH'],
+                'symbol': ['000001', '600000'],
+                'name': ['平安银行', '浦发银行'],
+                'list_date': ['1991-04-03', '1999-11-10']
+            })
         except Exception as e:
             st.error(f"加载股票列表失败: {str(e)}")
             # 返回示例数据
@@ -62,41 +46,41 @@ class DataLoader:
         try:
             file_path = self.data_dir / f"{stock_code}.txt"
             
-            # 尝试从本地文件加载
+            # 从本地文件加载
             if file_path.exists():
                 df = pd.read_csv(file_path)
-                df['trade_date'] = pd.to_datetime(df['trade_date'])
                 if not df.empty:
+                    df['trade_date'] = pd.to_datetime(df['trade_date'])
+                    df = df.sort_values('trade_date')
                     return df
             
-            # 如果本地文件不存在或为空，从API获取
-            end_date = datetime.now()
-            start_date = end_date - timedelta(days=365)  # 获取一年的数据
-            
-            time.sleep(1)  # 添加延迟避免频繁调用
-            df = self.pro.daily(ts_code=f"{stock_code}.SH" if stock_code.startswith('6') else f"{stock_code}.SZ",
-                              start_date=start_date.strftime('%Y%m%d'),
-                              end_date=end_date.strftime('%Y%m%d'))
-            
-            if not df.empty:
-                df['trade_date'] = pd.to_datetime(df['trade_date'])
-                df = df.sort_values('trade_date')
-                df.to_csv(file_path, index=False)
-                return df
-            else:
-                return self._generate_sample_data(stock_code)
+            # 如果本地文件不存在或为空，返回示例数据
+            return self._generate_sample_data(stock_code)
                 
         except Exception as e:
             st.error(f"加载股票数据失败: {str(e)}")
             return self._generate_sample_data(stock_code)
             
     def get_realtime_quote(self, stock_code):
-        """获取实时行情数据"""
+        """获取最新行情数据"""
         try:
-            time.sleep(1)  # 添加延迟避免频繁调用
-            df = ts.get_realtime_quotes(stock_code)
-            if df is not None and not df.empty:
-                return df
+            # 从本地文件获取最新数据
+            file_path = self.data_dir / f"{stock_code}.txt"
+            if file_path.exists():
+                df = pd.read_csv(file_path)
+                if not df.empty:
+                    latest_data = df.iloc[-1]
+                    return pd.DataFrame([{
+                        'code': stock_code,
+                        'name': '本地数据',
+                        'price': latest_data['close'],
+                        'open': latest_data['open'],
+                        'high': latest_data['high'],
+                        'low': latest_data['low'],
+                        'volume': latest_data['vol'],
+                        'amount': latest_data['amount'],
+                        'time': latest_data['trade_date']
+                    }])
             return self._generate_sample_quote(stock_code)
         except:
             return self._generate_sample_quote(stock_code)

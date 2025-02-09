@@ -5,6 +5,7 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from datetime import datetime
 from utils.data_loader import DataLoader
+from strategies.implementations import create_strategy
 
 def calculate_performance_metrics(returns):
     """计算绩效指标"""
@@ -58,13 +59,56 @@ def render_performance_analysis():
     st.subheader("策略信息")
     st.info(f"股票: {config['stock_code']} | 策略: {config['strategy_type']} | 周期: {config['start_date']} 至 {config['end_date']}")
     
-    # 加载数据
-    loader = DataLoader()
-    df = loader.load_daily_data(config['stock_code'].split('.')[0])
-    
-    if df is not None:
-        # 模拟策略收益率序列
-        returns = pd.Series(np.random.normal(0.0005, 0.02, len(df)), index=df['trade_date'])
+    # 加载数据并运行策略
+    try:
+        loader = DataLoader()
+        stock_code = config['stock_code'].split('.')[0]
+        data = loader.load_daily_data(stock_code)
+        
+        if data is None or data.empty:
+            st.error("无法加载股票数据，请检查股票代码是否正确")
+            return
+            
+        # 确保数据按日期排序
+        data = data.sort_values('trade_date')
+        data.set_index('trade_date', inplace=True)
+        
+        # 准备策略参数
+        strategy_params = {
+            'initial_capital': config['initial_capital'],
+            'commission_rate': config['commission_rate'],
+            'slippage': config['slippage'],
+            'price_type': config['price_type']
+        }
+        
+        # 添加特定策略的参数
+        if 'strategy_params' in config:
+            strategy_params.update(config['strategy_params'])
+            
+        # 添加仓位管理参数
+        if 'position_params' in config:
+            strategy_params.update(config['position_params'])
+            
+        # 添加交易条件
+        strategy_params['buy_conditions'] = config.get('buy_conditions', {})
+        strategy_params['sell_conditions'] = config.get('sell_conditions', {})
+        
+        # 创建并运行策略
+        strategy = create_strategy(
+            config['strategy_type'],
+            data,
+            **strategy_params
+        )
+        
+        results = strategy.run_backtest()
+        
+        if not results or 'equity_curve' not in results:
+            st.error("策略回测未返回有效结果")
+            return
+            
+        # 计算每日收益率
+        equity_curve = results['equity_curve']
+        returns = equity_curve.pct_change().fillna(0)
         
         # 计算绩效指标
         metrics = calculate_performance_metrics(returns)
@@ -181,8 +225,9 @@ def render_performance_analysis():
                 mime="text/csv"
             )
             
-    else:
-        st.error("获取股票数据失败，请检查股票代码是否正确")
+    except Exception as e:
+        st.error(f"绩效分析过程中发生错误: {str(e)}")
+        st.exception(e)
 
 if __name__ == "__main__":
     render_performance_analysis() 

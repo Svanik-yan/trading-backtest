@@ -187,6 +187,122 @@ def render_trades_tab(results, config):
         
     trades = pd.DataFrame(results['trades'])
     
+    # 加载股票数据用于绘制K线图
+    loader = DataLoader()
+    stock_data = loader.load_daily_data(config['stock_code'].split('.')[0])
+    
+    if stock_data is not None and not stock_data.empty:
+        # 确保数据按日期排序
+        stock_data = stock_data.sort_values('trade_date')
+        stock_data.set_index('trade_date', inplace=True)
+        
+        # 计算MA5和MA20
+        stock_data['MA5'] = stock_data['close'].rolling(window=5).mean()
+        stock_data['MA20'] = stock_data['close'].rolling(window=20).mean()
+        
+        # 创建K线图
+        st.subheader("交易K线图")
+        fig = go.Figure()
+        
+        # 添加K线数据
+        fig.add_trace(go.Candlestick(
+            x=stock_data.index,
+            open=stock_data['open'],
+            high=stock_data['high'],
+            low=stock_data['low'],
+            close=stock_data['close'],
+            name="K线",
+            increasing_line_color='red',  # 上涨为红色
+            decreasing_line_color='green'  # 下跌为绿色
+        ))
+        
+        # 添加MA5
+        fig.add_trace(go.Scatter(
+            x=stock_data.index,
+            y=stock_data['MA5'],
+            name="MA5",
+            line=dict(color='blue', width=1)
+        ))
+        
+        # 添加MA20
+        fig.add_trace(go.Scatter(
+            x=stock_data.index,
+            y=stock_data['MA20'],
+            name="MA20",
+            line=dict(color='purple', width=1)
+        ))
+        
+        # 添加买入点
+        buy_trades = trades[trades['type'] == '买入']
+        if not buy_trades.empty:
+            fig.add_trace(go.Scatter(
+                x=pd.to_datetime(buy_trades['date']),
+                y=buy_trades['price'],
+                mode='markers',
+                marker=dict(
+                    symbol='triangle-up',
+                    size=12,
+                    color='red',
+                    line=dict(width=2)
+                ),
+                name="买入"
+            ))
+        
+        # 添加卖出点
+        sell_trades = trades[trades['type'] == '卖出']
+        if not sell_trades.empty:
+            fig.add_trace(go.Scatter(
+                x=pd.to_datetime(sell_trades['date']),
+                y=sell_trades['price'],
+                mode='markers',
+                marker=dict(
+                    symbol='triangle-down',
+                    size=12,
+                    color='green',
+                    line=dict(width=2)
+                ),
+                name="卖出"
+            ))
+        
+        # 添加成交量图表
+        fig.add_trace(go.Bar(
+            x=stock_data.index,
+            y=stock_data['volume'],
+            name="成交量",
+            yaxis="y2",
+            marker_color=np.where(stock_data['close'] >= stock_data['open'], 'red', 'green')
+        ))
+        
+        # 更新布局
+        fig.update_layout(
+            height=800,
+            yaxis=dict(
+                title="价格",
+                side="left",
+                showgrid=True
+            ),
+            yaxis2=dict(
+                title="成交量",
+                side="right",
+                overlaying="y",
+                showgrid=False
+            ),
+            xaxis=dict(
+                title="日期",
+                rangeslider=dict(visible=True)
+            ),
+            legend=dict(
+                yanchor="top",
+                y=0.99,
+                xanchor="left",
+                x=0.01
+            ),
+            template="none"
+        )
+        
+        # 显示图表
+        st.plotly_chart(fig, use_container_width=True)
+    
     # 交易统计
     st.subheader("交易统计")
     col1, col2, col3, col4 = st.columns(4)

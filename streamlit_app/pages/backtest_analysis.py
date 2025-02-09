@@ -54,8 +54,42 @@ def render_backtest_analysis():
         return
         
     if "backtest_results" not in st.session_state:
-        st.warning("请先运行策略回测")
-        return
+        st.info("正在运行策略回测...")
+        
+        try:
+            # 获取策略配置
+            config = st.session_state["strategy_config"]
+            
+            # 加载股票数据
+            loader = DataLoader()
+            stock_data = loader.load_daily_data(config['stock_code'].split('.')[0])
+            
+            if stock_data is None or stock_data.empty:
+                st.error("无法加载股票数据，请检查股票代码是否正确")
+                return
+                
+            # 确保数据按日期排序
+            stock_data = stock_data.sort_values('trade_date')
+            stock_data.set_index('trade_date', inplace=True)
+            
+            # 创建并运行策略
+            strategy = create_strategy(
+                config['strategy_type'],
+                stock_data,
+                **{k: v for k, v in config.items() if k not in ['strategy_type', 'stock_code', 'start_date', 'end_date']}
+            )
+            
+            # 运行回测
+            results = strategy.run_backtest()
+            
+            # 保存回测结果到session state
+            st.session_state["backtest_results"] = results
+            st.experimental_rerun()
+            
+        except Exception as e:
+            st.error(f"运行回测时发生错误: {str(e)}")
+            st.exception(e)
+            return
     
     # 获取策略配置和回测结果
     config = st.session_state["strategy_config"]

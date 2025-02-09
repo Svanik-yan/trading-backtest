@@ -13,14 +13,22 @@ def render_strategy_config():
         col1, col2 = st.columns(2)
         
         with col1:
+            # 添加搜索框
+            search_text = st.text_input("搜索股票代码或名称", key="stock_search_strategy")
+            
             # 股票选择
             loader = DataLoader()
-            stock_list = loader.load_stock_list()
-            selected_stock = st.selectbox(
-                "选择股票",
-                options=stock_list['ts_code'].tolist(),
-                format_func=lambda x: f"{x} - {stock_list[stock_list['ts_code']==x]['name'].values[0]}"
-            )
+            stock_list = loader.load_stock_list(search_text)
+            
+            if not stock_list.empty:
+                selected_stock = st.selectbox(
+                    "选择股票",
+                    options=stock_list['ts_code'].tolist(),
+                    format_func=lambda x: f"{x} - {stock_list[stock_list['ts_code']==x]['name'].values[0]}"
+                )
+            else:
+                st.warning("未找到匹配的股票")
+                selected_stock = None
             
             # 回测周期
             start_date = st.date_input(

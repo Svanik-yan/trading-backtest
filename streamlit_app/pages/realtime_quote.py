@@ -11,8 +11,17 @@ def render_realtime_quote():
     # 初始化数据加载器
     loader = DataLoader()
     
+    # 添加搜索框
+    search_text = st.text_input("搜索股票代码或名称", key="stock_search_quote")
+    
+    # 获取股票列表并应用搜索过滤
+    stock_list = loader.load_stock_list(search_text)
+    
+    if stock_list.empty:
+        st.warning("未找到匹配的股票")
+        return
+        
     # 股票选择
-    stock_list = loader.load_stock_list()
     selected_stock = st.selectbox(
         "选择股票",
         options=stock_list['ts_code'].tolist(),

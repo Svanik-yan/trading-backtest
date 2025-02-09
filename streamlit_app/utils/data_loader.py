@@ -49,8 +49,12 @@ class DataLoader:
         response = requests.get(url)
         return response.json()['data'] if response.json()['code'] == 200 else []
         
-    def load_stock_list(self):
-        """加载股票列表"""
+    def load_stock_list(self, search_text=None):
+        """加载股票列表，支持按代码或名称搜索
+        
+        Args:
+            search_text (str, optional): 搜索文本，可以是股票代码或名称. Defaults to None.
+        """
         try:
             # 从根目录下的stock_list.txt加载
             stock_list_path = Path("stock_list.txt")
@@ -75,7 +79,19 @@ class DataLoader:
                     stock_list = stock_list[stock_list['is_active'] == 1]
                     
                     # 选择所需的列
-                    return stock_list[['ts_code', 'symbol', 'name']]
+                    stock_list = stock_list[['ts_code', 'symbol', 'name']]
+                    
+                    # 如果提供了搜索文本，进行过滤
+                    if search_text:
+                        search_text = search_text.lower()
+                        mask = (
+                            stock_list['ts_code'].str.lower().str.contains(search_text) |
+                            stock_list['symbol'].str.lower().str.contains(search_text) |
+                            stock_list['name'].str.lower().str.contains(search_text)
+                        )
+                        stock_list = stock_list[mask]
+                    
+                    return stock_list
             
             return self._get_default_stock_list()
         except Exception as e:

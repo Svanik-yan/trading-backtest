@@ -111,7 +111,7 @@ def render_backtest_analysis():
             render_overview_tab(results, config)
             
         with tab2:
-            render_trades_tab(results)
+            render_trades_tab(results, config)
             
         with tab3:
             render_performance_tab(results, config)
@@ -179,7 +179,7 @@ def render_overview_tab(results, config):
     fig.update_layout(height=800, showlegend=True)
     st.plotly_chart(fig, use_container_width=True)
 
-def render_trades_tab(results):
+def render_trades_tab(results, config):
     """渲染交易记录选项卡"""
     if not results.get('trades') or len(results['trades']) == 0:
         st.warning("没有找到交易记录")

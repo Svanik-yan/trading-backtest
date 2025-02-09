@@ -50,7 +50,7 @@ ENV/
 !requirements.txt
 !stock_list.txt
 !public/daily_stock_data/*.txt
-!public/metadata/*.txt
+!public/metadata/*.csv
 
 # Streamlit
 .streamlit/
@@ -58,4 +58,4 @@ ENV/
 # Local development
 *.db
 *.sqlite3
-.ipynb_checkpoints/ 
+.ipynb_checkpoints/

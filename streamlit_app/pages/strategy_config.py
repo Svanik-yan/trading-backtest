@@ -239,9 +239,18 @@ def render_strategy_config():
         else:
             position_ratio = st.slider("资金使用比例", 0.0, 1.0, 0.3)
         
-        # 提交按钮
-        submitted = st.form_submit_button("开始回测")
+        # 提交按钮区域
+        col_submit1, col_submit2, col_submit3, col_submit4 = st.columns(4)
         
+        with col_submit1:
+            submitted = st.form_submit_button("开始回测")
+            
+        with col_submit2:
+            ai_submitted = st.form_submit_button(
+                "AI回测（开发中）",
+                disabled=True
+            )
+            
         if submitted:
             # 保存策略配置
             strategy_config = {

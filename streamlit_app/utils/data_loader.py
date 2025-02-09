@@ -142,23 +142,17 @@ class DataLoader:
                 # 确保所需的列都存在
                 required_columns = ['trade_date', 'open', 'high', 'low', 'close', 'vol', 'amount']
                 if not all(col in df.columns for col in required_columns):
+                    st.error(f"数据文件缺少必要的列: {required_columns}")
                     return self._generate_sample_data(stock_code)
                 
-                # 重命名 volume 列
-                if 'volume' in df.columns:
-                    df = df.rename(columns={'volume': 'vol'})
+                # 重命名列以匹配代码中使用的名称
+                df = df.rename(columns={'vol': 'volume'})
                 
                 # 转换日期格式
                 df['trade_date'] = pd.to_datetime(df['trade_date'])
                 
-                # 确保数值列为浮点数
-                numeric_columns = ['open', 'high', 'low', 'close', 'vol', 'amount']
-                for col in numeric_columns:
-                    df[col] = pd.to_numeric(df[col], errors='coerce')
-                
                 # 按日期排序
                 df = df.sort_values('trade_date')
-                
                 return df
             
             return self._generate_sample_data(stock_code)
@@ -173,7 +167,7 @@ class DataLoader:
             # 从本地文件获取最新数据
             file_path = self.data_dir / f"{stock_code}.txt"
             if file_path.exists():
-                df = pd.read_csv(file_path, sep='\t')
+                df = pd.read_csv(file_path)
                 if not df.empty:
                     latest_data = df.iloc[-1]
                     return pd.DataFrame([{
@@ -183,13 +177,12 @@ class DataLoader:
                         'open': latest_data['open'],
                         'high': latest_data['high'],
                         'low': latest_data['low'],
-                        'vol': latest_data['vol'],
+                        'volume': latest_data['volume'],
                         'amount': latest_data['amount'],
                         'time': latest_data['trade_date']
                     }])
             return self._generate_sample_quote(stock_code)
-        except Exception as e:
-            st.error(f"获取实时行情失败: {str(e)}")
+        except:
             return self._generate_sample_quote(stock_code)
             
     def _generate_sample_data(self, stock_code):
@@ -205,13 +198,10 @@ class DataLoader:
                 'high': price * (1 + np.random.normal(0, 0.01)),
                 'low': price * (1 + np.random.normal(0, 0.01)),
                 'close': price,
-                'vol': np.random.randint(1000000, 10000000),
+                'volume': np.random.randint(1000000, 10000000),
                 'amount': np.random.randint(10000000, 100000000)
             })
-        df = pd.DataFrame(data)
-        # 确保日期格式正确
-        df['trade_date'] = pd.to_datetime(df['trade_date'])
-        return df
+        return pd.DataFrame(data)
         
     def _generate_sample_quote(self, stock_code):
         """生成示例实时行情"""
@@ -220,11 +210,10 @@ class DataLoader:
             'code': stock_code,
             'name': '示例股票',
             'price': f"{price:.2f}",
-            'open': f"{price * 0.98:.2f}",
-            'high': f"{price * 1.02:.2f}",
-            'low': f"{price * 0.97:.2f}",
-            'vol': np.random.randint(1000000, 10000000),
-            'amount': np.random.randint(10000000, 100000000),
+            'bid': f"{price * 0.99:.2f}",
+            'ask': f"{price * 1.01:.2f}",
+            'volume': f"{np.random.randint(1000000, 10000000)}",
+            'amount': f"{np.random.randint(10000000, 100000000)}",
             'time': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         }])
         

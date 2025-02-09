@@ -181,8 +181,8 @@ def render_strategy_config():
                         stock_data = loader.load_daily_data(selected_stock.split('.')[0])
                         if stock_data is not None and not stock_data.empty:
                             # 获取开始日期最近的收盘价
-                            start_date_str = start_date.strftime('%Y-%m-%d')
-                            filtered_data = stock_data[stock_data['trade_date'] >= start_date_str]
+                            start_date_str = start_date.strftime('%Y%m%d')
+                            filtered_data = stock_data[stock_data['trade_date'].astype(str) >= start_date_str]
                             
                             if filtered_data.empty:
                                 st.error(f"在{start_date_str}之后没有找到交易数据，请选择更早的开始日期")

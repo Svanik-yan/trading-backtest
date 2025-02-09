@@ -6,6 +6,19 @@ from utils.data_loader import DataLoader
 def render_strategy_config():
     st.title("策略配置")
     
+    # 初始化数据加载器
+    loader = DataLoader()
+    
+    # 添加搜索框
+    search_text = st.text_input("搜索股票代码或名称", key="stock_search_strategy")
+    
+    # 获取股票列表并应用搜索过滤
+    stock_list = loader.load_stock_list(search_text)
+    
+    if stock_list.empty:
+        st.warning("未找到匹配的股票")
+        return
+        
     # 创建表单
     with st.form("strategy_config_form"):
         # 基本设置
@@ -13,22 +26,12 @@ def render_strategy_config():
         col1, col2 = st.columns(2)
         
         with col1:
-            # 添加搜索框
-            search_text = st.text_input("搜索股票代码或名称", key="stock_search_strategy")
-            
             # 股票选择
-            loader = DataLoader()
-            stock_list = loader.load_stock_list(search_text)
-            
-            if not stock_list.empty:
-                selected_stock = st.selectbox(
-                    "选择股票",
-                    options=stock_list['ts_code'].tolist(),
-                    format_func=lambda x: f"{x} - {stock_list[stock_list['ts_code']==x]['name'].values[0]}"
-                )
-            else:
-                st.warning("未找到匹配的股票")
-                selected_stock = None
+            selected_stock = st.selectbox(
+                "选择股票",
+                options=stock_list['ts_code'].tolist(),
+                format_func=lambda x: f"{x} - {stock_list[stock_list['ts_code']==x]['name'].values[0]}"
+            )
             
             # 回测周期
             start_date = st.date_input(
@@ -103,9 +106,8 @@ def render_strategy_config():
                     key="buy_logic"
                 )
             
-            # 添加自定义条件按钮
-            if st.button("添加自定义条件", key="add_buy_condition"):
-                st.text_input("自定义买入条件", key="custom_buy_condition")
+            # 自定义买入条件
+            custom_buy_condition = st.text_input("自定义买入条件", key="custom_buy_condition")
         
         with sell_col:
             st.markdown("##### 卖出条件")
@@ -125,9 +127,8 @@ def render_strategy_config():
                     key="sell_logic"
                 )
             
-            # 添加自定义条件按钮
-            if st.button("添加自定义条件", key="add_sell_condition"):
-                st.text_input("自定义卖出条件", key="custom_sell_condition")
+            # 自定义卖出条件
+            custom_sell_condition = st.text_input("自定义卖出条件", key="custom_sell_condition")
         
         # 根据策略类型显示不同的参数设置
         if strategy_type == "双均线交叉":
@@ -193,46 +194,54 @@ def render_strategy_config():
                 "buy_conditions": {
                     "indicators": buy_indicators,
                     "logic": buy_logic if len(buy_indicators) > 1 else None,
-                    "custom": st.session_state.get("custom_buy_condition", "")
+                    "custom": custom_buy_condition
                 },
                 "sell_conditions": {
                     "indicators": sell_indicators,
                     "logic": sell_logic if len(sell_indicators) > 1 else None,
-                    "custom": st.session_state.get("custom_sell_condition", "")
+                    "custom": custom_sell_condition
                 }
             }
             
             # 根据策略类型添加特定参数
             if strategy_type == "双均线交叉":
                 strategy_config.update({
-                    "fast_period": fast_period,
-                    "slow_period": slow_period
+                    "strategy_params": {
+                        "fast_period": fast_period,
+                        "slow_period": slow_period
+                    }
                 })
             elif strategy_type == "MACD金叉死叉":
                 strategy_config.update({
-                    "fast_ema": fast_ema,
-                    "slow_ema": slow_ema,
-                    "signal_period": signal_period
+                    "strategy_params": {
+                        "fast_ema": fast_ema,
+                        "slow_ema": slow_ema,
+                        "signal_period": signal_period
+                    }
                 })
             elif strategy_type == "RSI超买超卖":
                 strategy_config.update({
-                    "rsi_period": rsi_period,
-                    "overbought": overbought,
-                    "oversold": oversold
+                    "strategy_params": {
+                        "rsi_period": rsi_period,
+                        "overbought": overbought,
+                        "oversold": oversold
+                    }
                 })
             elif strategy_type == "布林带突破":
                 strategy_config.update({
-                    "bb_period": bb_period,
-                    "bb_std": bb_std
+                    "strategy_params": {
+                        "bb_period": bb_period,
+                        "bb_std": bb_std
+                    }
                 })
             
             # 添加仓位管理参数
             if position_type == "固定手数":
-                strategy_config["fixed_volume"] = fixed_volume
+                strategy_config["position_params"] = {"fixed_volume": fixed_volume}
             elif position_type == "固定资金":
-                strategy_config["fixed_amount"] = fixed_amount
+                strategy_config["position_params"] = {"fixed_amount": fixed_amount}
             else:
-                strategy_config["position_ratio"] = position_ratio
+                strategy_config["position_params"] = {"position_ratio": position_ratio}
             
             # 将配置保存到session state
             st.session_state["strategy_config"] = strategy_config

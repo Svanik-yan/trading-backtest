@@ -252,82 +252,115 @@ def render_strategy_config():
             )
             
         if submitted:
+            # 验证必填字段
+            if not selected_stock:
+                st.error("请选择股票")
+                return
+                
+            if start_date >= end_date:
+                st.error("开始日期必须早于结束日期")
+                return
+                
+            if initial_capital <= 0:
+                st.error("初始资金必须大于0")
+                return
+                
             # 保存策略配置
-            strategy_config = {
-                "stock_code": selected_stock,
-                "start_date": start_date,
-                "end_date": end_date,
-                "initial_capital": initial_capital,
-                "commission_rate": commission_rate,
-                "slippage": slippage,
-                "price_type": price_type,
-                "strategy_type": strategy_type,
-                "position_type": position_type,
-                "buy_conditions": {
-                    "indicators": buy_indicators,
-                    "logic": buy_logic if len(buy_indicators) > 1 else None,
-                    "custom": custom_buy_condition
-                },
-                "sell_conditions": {
-                    "indicators": sell_indicators,
-                    "logic": sell_logic if len(sell_indicators) > 1 else None,
-                    "custom": custom_sell_condition
+            try:
+                strategy_config = {
+                    "stock_code": selected_stock,
+                    "start_date": start_date,
+                    "end_date": end_date,
+                    "initial_capital": initial_capital,
+                    "commission_rate": commission_rate,
+                    "slippage": slippage,
+                    "price_type": price_type,
+                    "strategy_type": strategy_type,
+                    "position_type": position_type,
+                    "buy_conditions": {
+                        "indicators": buy_indicators,
+                        "logic": buy_logic if len(buy_indicators) > 1 else None,
+                        "custom": custom_buy_condition
+                    },
+                    "sell_conditions": {
+                        "indicators": sell_indicators,
+                        "logic": sell_logic if len(sell_indicators) > 1 else None,
+                        "custom": custom_sell_condition
+                    }
                 }
-            }
-            
-            # 根据策略类型添加特定参数
-            if strategy_type == "双均线交叉":
-                strategy_config.update({
-                    "strategy_params": {
-                        "fast_period": fast_period,
-                        "slow_period": slow_period
+                
+                # 根据策略类型添加特定参数
+                if strategy_type == "双均线交叉":
+                    if fast_period >= slow_period:
+                        st.error("快线周期必须小于慢线周期")
+                        return
+                    strategy_config.update({
+                        "strategy_params": {
+                            "fast_period": fast_period,
+                            "slow_period": slow_period
+                        }
+                    })
+                elif strategy_type == "MACD金叉死叉":
+                    if fast_ema >= slow_ema:
+                        st.error("快线EMA必须小于慢线EMA")
+                        return
+                    strategy_config.update({
+                        "strategy_params": {
+                            "fast_ema": fast_ema,
+                            "slow_ema": slow_ema,
+                            "signal_period": signal_period
+                        }
+                    })
+                elif strategy_type == "RSI超买超卖":
+                    if oversold >= overbought:
+                        st.error("超卖阈值必须小于超买阈值")
+                        return
+                    strategy_config.update({
+                        "strategy_params": {
+                            "rsi_period": rsi_period,
+                            "overbought": overbought,
+                            "oversold": oversold
+                        }
+                    })
+                elif strategy_type == "布林带突破":
+                    strategy_config.update({
+                        "strategy_params": {
+                            "bb_period": bb_period,
+                            "bb_std": bb_std
+                        }
+                    })
+                
+                # 添加仓位管理参数
+                if position_type == "固定手数":
+                    strategy_config["position_params"] = {
+                        "fixed_volume": fixed_volume,
+                        "is_full_position": is_full_position
                     }
-                })
-            elif strategy_type == "MACD金叉死叉":
-                strategy_config.update({
-                    "strategy_params": {
-                        "fast_ema": fast_ema,
-                        "slow_ema": slow_ema,
-                        "signal_period": signal_period
-                    }
-                })
-            elif strategy_type == "RSI超买超卖":
-                strategy_config.update({
-                    "strategy_params": {
-                        "rsi_period": rsi_period,
-                        "overbought": overbought,
-                        "oversold": oversold
-                    }
-                })
-            elif strategy_type == "布林带突破":
-                strategy_config.update({
-                    "strategy_params": {
-                        "bb_period": bb_period,
-                        "bb_std": bb_std
-                    }
-                })
-            
-            # 添加仓位管理参数
-            if position_type == "固定手数":
-                strategy_config["position_params"] = {
-                    "fixed_volume": fixed_volume,
-                    "is_full_position": is_full_position
-                }
-            elif position_type == "固定资金":
-                strategy_config["position_params"] = {"fixed_amount": fixed_amount}
-            else:
-                strategy_config["position_params"] = {"position_ratio": position_ratio}
-            
-            # 将配置保存到session state
-            st.session_state["strategy_config"] = strategy_config
-            
-            # 设置跳转标志
-            st.session_state["should_redirect"] = True
-            st.session_state["redirect_page"] = "回测分析"
-            
-            # 显示成功消息并自动跳转
-            st.success("策略配置已保存，正在跳转到回测分析页面...")
-            st.experimental_rerun()
+                elif position_type == "固定资金":
+                    if fixed_amount <= 0:
+                        st.error("交易金额必须大于0")
+                        return
+                    strategy_config["position_params"] = {"fixed_amount": fixed_amount}
+                else:
+                    if position_ratio <= 0 or position_ratio > 1:
+                        st.error("资金使用比例必须在0到1之间")
+                        return
+                    strategy_config["position_params"] = {"position_ratio": position_ratio}
+                
+                # 将配置保存到session state
+                st.session_state["strategy_config"] = strategy_config
+                
+                # 设置跳转标志
+                st.session_state["should_redirect"] = True
+                st.session_state["redirect_page"] = "回测分析"
+                
+                # 显示成功消息并自动跳转
+                st.success("策略配置已保存，正在跳转到回测分析页面...")
+                st.experimental_rerun()
+                
+            except Exception as e:
+                st.error(f"保存策略配置时发生错误: {str(e)}")
+                st.exception(e)
             
     # 在底部添加免责声明
     st.markdown("---")

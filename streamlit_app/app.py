@@ -37,14 +37,15 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+# 初始化session state
+if "page" not in st.session_state:
+    st.session_state.page = "策略配置"
+
 # 处理页面跳转
 if "should_redirect" in st.session_state and st.session_state["should_redirect"]:
-    selected_page = st.session_state["redirect_page"]
-    # 清除跳转标志
+    st.session_state.page = st.session_state["redirect_page"]
     st.session_state["should_redirect"] = False
     del st.session_state["redirect_page"]
-else:
-    selected_page = "策略配置"
 
 # 侧边栏导航
 with st.sidebar:
@@ -65,7 +66,7 @@ with st.sidebar:
             "pie-chart"
         ],
         menu_icon="cast",
-        default_index=1 if selected_page == "策略配置" else 2,  # 根据跳转状态设置默认页面
+        default_index=2 if st.session_state.page == "回测分析" else 1,
         styles={
             "container": {"padding": "0!important", "background-color": "#fafafa"},
             "icon": {"color": "orange", "font-size": "25px"}, 
@@ -73,6 +74,7 @@ with st.sidebar:
             "nav-link-selected": {"background-color": "#ff4b4b"},
         }
     )
+    st.session_state.page = selected
 
 # 主页面内容
 st.title("股票策略回测系统")

@@ -277,12 +277,16 @@ def render_trade_records():
         # 计算收益率和总资产
         current_equity = config['initial_capital']
         for idx, row in display_trades.iterrows():
+            amount = float(row['金额'].replace('¥', '').replace(',', ''))
             if row['交易类型'] == '买入':
-                current_equity -= float(row['amount'].replace('¥', '').replace(',', ''))
-            else:
-                profit = float(row['profit'])
-                current_equity += profit
+                current_equity -= amount
+                profit = 0
+            else:  # 卖出
+                current_equity += amount
+                profit = amount - float(filtered_trades.iloc[idx]['amount'])  # 使用原始数据计算收益
+            
             display_trades.at[idx, '总资产'] = current_equity
+            display_trades.at[idx, 'profit'] = profit  # 保存收益用于后续计算
             
             # 计算增长率
             if idx > 0:
@@ -294,11 +298,14 @@ def render_trade_records():
         
         # 格式化收益率、增长率和总资产显示
         display_trades['收益率'] = display_trades.apply(
-            lambda row: f"{(float(row['profit']) / float(row['amount'].replace('¥', '').replace(',', '')) * 100):.2f}%" if row['交易类型'] == '卖出' else "0.00%",
+            lambda row: f"{(row['profit'] / float(row['金额'].replace('¥', '').replace(',', '')) * 100):.2f}%" if row['交易类型'] == '卖出' else "0.00%",
             axis=1
         )
         display_trades['增长率'] = display_trades['增长率'].apply(lambda x: f"{x:.2f}%")
         display_trades['总资产'] = display_trades['总资产'].apply(lambda x: f"¥{x:,.2f}")
+        
+        # 删除临时的profit列
+        display_trades = display_trades.drop('profit', axis=1)
         
         # 设置列顺序
         columns_order = ['交易类型', '价格', '数量', '金额', '收益率', '增长率', '总资产', '交易时间']

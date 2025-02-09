@@ -88,6 +88,17 @@ class BaseStrategy(ABC):
         # 计算交易金额
         trade_amount = trade_price * volume
         
+        # 验证资金和持仓
+        if is_buy:
+            # 买入时验证资金是否足够
+            total_cost = trade_amount + commission
+            if total_cost > self.cash:
+                return 0  # 资金不足，放弃交易
+        else:
+            # 卖出时验证持仓是否足够
+            if volume > self.position:
+                return 0  # 持仓不足，放弃交易
+        
         # 更新现金和仓位
         if is_buy:
             self.cash -= (trade_amount + commission)
@@ -130,7 +141,13 @@ class BaseStrategy(ABC):
             price = self.data['open'].iloc[i] if self.price_type == "开盘价" else self.data['close'].iloc[i]
             
             # 获取目标仓位
-            target_shares = int((signals.iloc[i] / 100) * self.cash / price)
+            signal = signals.iloc[i]
+            if signal > 0:  # 买入信号
+                # 计算最大可买入数量（考虑手续费）
+                max_shares = int(self.cash / (price * (1 + self.slippage + self.commission_rate)))
+                target_shares = max_shares if self.position == 0 else self.position
+            else:  # 卖出信号
+                target_shares = 0  # 满仓卖出
             
             # 执行交易
             profit = self.execute_trade(date, price, target_shares)

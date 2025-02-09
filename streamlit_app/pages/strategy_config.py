@@ -81,7 +81,8 @@ def render_strategy_config():
         # 选择策略类型
         strategy_type = st.selectbox(
             "策略类型",
-            ["双均线交叉", "MACD金叉死叉", "RSI超买超卖", "布林带突破"]
+            ["双均线交叉", "MACD金叉死叉", "RSI超买超卖", "布林带突破"],
+            index=1  # 默认选择"MACD金叉死叉"
         )
         
         # 买入条件和卖出条件设置
@@ -95,6 +96,7 @@ def render_strategy_config():
             buy_indicators = st.multiselect(
                 "选择技术指标",
                 ["MACD金叉", "RSI超卖", "MA交叉向上", "布林带下轨"],
+                default=["MACD金叉"],  # 默认选中MACD金叉
                 key="buy_indicators"
             )
             
@@ -106,8 +108,12 @@ def render_strategy_config():
                     key="buy_logic"
                 )
             
-            # 自定义买入条件
-            custom_buy_condition = st.text_input("自定义买入条件", key="custom_buy_condition")
+            # 自定义买入条件（禁用）
+            custom_buy_condition = st.text_input(
+                "自定义买入条件（开发中）",
+                key="custom_buy_condition",
+                disabled=True
+            )
         
         with sell_col:
             st.markdown("##### 卖出条件")
@@ -116,6 +122,7 @@ def render_strategy_config():
             sell_indicators = st.multiselect(
                 "选择技术指标",
                 ["MACD死叉", "RSI超买", "MA交叉向下", "布林带上轨"],
+                default=["MACD死叉"],  # 默认选中MACD死叉
                 key="sell_indicators"
             )
             
@@ -127,8 +134,12 @@ def render_strategy_config():
                     key="sell_logic"
                 )
             
-            # 自定义卖出条件
-            custom_sell_condition = st.text_input("自定义卖出条件", key="custom_sell_condition")
+            # 自定义卖出条件（禁用）
+            custom_sell_condition = st.text_input(
+                "自定义卖出条件（开发中）",
+                key="custom_sell_condition",
+                disabled=True
+            )
         
         # 根据策略类型显示不同的参数设置
         if strategy_type == "双均线交叉":
@@ -301,6 +312,10 @@ def render_strategy_config():
             # 将配置保存到session state
             st.session_state["strategy_config"] = strategy_config
             st.success("策略配置已保存，请前往回测分析页面查看结果")
+            
+    # 在底部添加免责声明
+    st.markdown("---")
+    st.caption("本网站的信息仅供参考，不构成任何投资建议。")
 
 if __name__ == "__main__":
     render_strategy_config() 

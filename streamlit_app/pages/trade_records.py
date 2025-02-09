@@ -16,7 +16,7 @@ def render_trade_records():
     
     # 显示策略信息
     st.subheader("策略信息")
-    st.info(f"股票: {config['stock_code']} | 策略: {config['strategy_type']} | 周期: {config['start_date']} 至 {config['end_date']}")
+    st.info(f"股票: {config['stock_code']} | 策略: {config['strategy_type']} | 周期: {config['start_date'].strftime('%Y-%m-%d')} 至 {config['end_date'].strftime('%Y-%m-%d')}")
     
     # 模拟生成交易记录
     trades = pd.DataFrame({
@@ -94,6 +94,7 @@ def render_trade_records():
     # 显示交易记录
     st.dataframe(
         filtered_trades.style.format({
+            'trade_date': lambda x: x.strftime('%Y-%m-%d'),
             'price': '¥{:.2f}',
             'amount': '¥{:.2f}',
             'commission': '¥{:.2f}',
@@ -129,7 +130,10 @@ def render_trade_records():
     
     # 导出功能
     if st.button("导出交易记录"):
-        csv = filtered_trades.to_csv(index=False)
+        # 转换日期格式为字符串
+        export_trades = filtered_trades.copy()
+        export_trades['trade_date'] = export_trades['trade_date'].dt.strftime('%Y-%m-%d')
+        csv = export_trades.to_csv(index=False)
         st.download_button(
             label="下载CSV文件",
             data=csv,

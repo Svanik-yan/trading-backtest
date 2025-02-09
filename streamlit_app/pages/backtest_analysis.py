@@ -158,6 +158,9 @@ def render_backtest_analysis():
                 trades_df['commission'] = trades_df['commission'].round(2)
                 st.dataframe(trades_df.tail(10))
                 
+                # 添加AI回测分析报告按钮
+                st.button("生成AI回测分析报告（开发中）", disabled=True)
+                
         except Exception as e:
             st.error(f"策略执行错误: {str(e)}")
             st.exception(e)
@@ -165,6 +168,10 @@ def render_backtest_analysis():
     except Exception as e:
         st.error(f"回测过程中发生错误: {str(e)}")
         st.exception(e)
+        
+    # 在底部添加免责声明
+    st.markdown("---")
+    st.caption("本网站的信息仅供参考，不构成任何投资建议。")
         
 if __name__ == "__main__":
     render_backtest_analysis() 

@@ -116,13 +116,56 @@ def render_trade_records():
                 name="卖出点"
             ))
         
-        # 更新布局
+        # 更新布局，添加缩放和交互功能
         fig.update_layout(
             title=f"{config['stock_code']} K线图与交易点",
             yaxis_title="价格",
             xaxis_title="日期",
             height=600,
-            xaxis_rangeslider_visible=False
+            xaxis_rangeslider_visible=True,  # 添加下方的范围滑块
+            dragmode='zoom',  # 启用框选缩放
+            showlegend=True,
+            legend=dict(
+                yanchor="top",
+                y=0.99,
+                xanchor="left",
+                x=0.01
+            ),
+            modebar=dict(
+                add=[
+                    'drawline',
+                    'drawopenpath',
+                    'drawclosedpath',
+                    'drawcircle',
+                    'drawrect',
+                    'eraseshape'
+                ]
+            ),
+            modebar_add=[
+                'zoom',
+                'pan',
+                'select',
+                'zoomIn',
+                'zoomOut',
+                'autoScale',
+                'resetScale'
+            ]
+        )
+        
+        # 配置Y轴
+        fig.update_yaxes(
+            fixedrange=False,  # 允许Y轴缩放
+            showgrid=True,     # 显示网格
+            gridwidth=1,
+            gridcolor='rgba(211,211,211,0.3)'
+        )
+        
+        # 配置X轴
+        fig.update_xaxes(
+            showgrid=True,     # 显示网格
+            gridwidth=1,
+            gridcolor='rgba(211,211,211,0.3)',
+            rangeslider=dict(visible=True)  # 显示下方的范围滑块
         )
         
         # 显示图表
@@ -220,6 +263,10 @@ def render_trade_records():
     except Exception as e:
         st.error(f"处理交易记录时发生错误: {str(e)}")
         st.exception(e)
+        
+    # 在底部添加免责声明
+    st.markdown("---")
+    st.caption("本网站的信息仅供参考，不构成任何投资建议。")
 
 if __name__ == "__main__":
     render_trade_records() 

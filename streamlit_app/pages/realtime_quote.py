@@ -96,5 +96,9 @@ def render_realtime_quote():
     else:
         st.error("获取实时数据失败，请稍后重试")
 
+    # 在底部添加免责声明
+    st.markdown("---")
+    st.caption("本网站的信息仅供参考，不构成任何投资建议。")
+
 if __name__ == "__main__":
     render_realtime_quote() 

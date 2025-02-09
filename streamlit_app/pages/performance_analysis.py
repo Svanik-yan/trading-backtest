@@ -228,6 +228,10 @@ def render_performance_analysis():
     except Exception as e:
         st.error(f"绩效分析过程中发生错误: {str(e)}")
         st.exception(e)
+        
+    # 在底部添加免责声明
+    st.markdown("---")
+    st.caption("本网站的信息仅供参考，不构成任何投资建议。")
 
 if __name__ == "__main__":
     render_performance_analysis() 

@@ -3,11 +3,12 @@ import numpy as np
 from pathlib import Path
 import tushare as ts
 from datetime import datetime, timedelta
+import streamlit as st
 
 class DataLoader:
     def __init__(self, data_dir="public/daily_stock_data"):
         self.data_dir = Path(data_dir)
-        self.ts_token = '7a704330a5be992e1a89736e558f1fe72b5329f3696824e994037be0'
+        self.ts_token = st.secrets["tushare"]["token"]
         ts.set_token(self.ts_token)
         self.pro = ts.pro_api()
         

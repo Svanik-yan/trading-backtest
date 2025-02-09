@@ -37,36 +37,29 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# 初始化session state
-if "page" not in st.session_state:
-    st.session_state.page = "策略配置"
-
-# 处理页面跳转
-if "should_redirect" in st.session_state and st.session_state["should_redirect"]:
-    st.session_state.page = st.session_state["redirect_page"]
-    st.session_state["should_redirect"] = False
-    del st.session_state["redirect_page"]
-
 # 侧边栏导航
 with st.sidebar:
+    # 定义页面选项
+    options = [
+        "实时行情（开发中）", 
+        "策略配置",
+        "回测分析"
+    ]
+    
+    # 初始化selected在session_state中
+    if 'selected_page' not in st.session_state:
+        st.session_state['selected_page'] = "策略配置"
+        
     selected = option_menu(
         menu_title="主菜单",
-        options=[
-            "实时行情（开发中）", 
-            "策略配置",
-            "回测分析",
-            "交易记录",
-            "绩效分析"
-        ],
+        options=options,
         icons=[
             "graph-up",
             "gear",
-            "calculator",
-            "journal-text",
-            "pie-chart"
+            "calculator"
         ],
         menu_icon="cast",
-        default_index=2 if st.session_state.page == "回测分析" else 1,
+        default_index=options.index(st.session_state['selected_page']),  # 使用保存的页面索引
         styles={
             "container": {"padding": "0!important", "background-color": "#fafafa"},
             "icon": {"color": "orange", "font-size": "25px"}, 
@@ -74,7 +67,8 @@ with st.sidebar:
             "nav-link-selected": {"background-color": "#ff4b4b"},
         }
     )
-    st.session_state.page = selected
+    # 更新selected_page
+    st.session_state['selected_page'] = selected
 
 # 主页面内容
 st.title("股票策略回测系统")
@@ -88,12 +82,4 @@ elif selected == "策略配置":
     
 elif selected == "回测分析":
     from pages.backtest_analysis import render_backtest_analysis
-    render_backtest_analysis()
-    
-elif selected == "交易记录":
-    from pages.trade_records import render_trade_records
-    render_trade_records()
-    
-elif selected == "绩效分析":
-    from pages.performance_analysis import render_performance_analysis
-    render_performance_analysis() 
+    render_backtest_analysis() 

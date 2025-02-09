@@ -173,7 +173,7 @@ class DataLoader:
             # 从本地文件获取最新数据
             file_path = self.data_dir / f"{stock_code}.txt"
             if file_path.exists():
-                df = pd.read_csv(file_path)
+                df = pd.read_csv(file_path, sep='\t')
                 if not df.empty:
                     latest_data = df.iloc[-1]
                     return pd.DataFrame([{
@@ -183,12 +183,13 @@ class DataLoader:
                         'open': latest_data['open'],
                         'high': latest_data['high'],
                         'low': latest_data['low'],
-                        'volume': latest_data['vol'],
+                        'vol': latest_data['vol'],
                         'amount': latest_data['amount'],
                         'time': latest_data['trade_date']
                     }])
             return self._generate_sample_quote(stock_code)
-        except:
+        except Exception as e:
+            st.error(f"获取实时行情失败: {str(e)}")
             return self._generate_sample_quote(stock_code)
             
     def _generate_sample_data(self, stock_code):
@@ -207,7 +208,10 @@ class DataLoader:
                 'vol': np.random.randint(1000000, 10000000),
                 'amount': np.random.randint(10000000, 100000000)
             })
-        return pd.DataFrame(data)
+        df = pd.DataFrame(data)
+        # 确保日期格式正确
+        df['trade_date'] = pd.to_datetime(df['trade_date'])
+        return df
         
     def _generate_sample_quote(self, stock_code):
         """生成示例实时行情"""
@@ -216,10 +220,11 @@ class DataLoader:
             'code': stock_code,
             'name': '示例股票',
             'price': f"{price:.2f}",
-            'bid': f"{price * 0.99:.2f}",
-            'ask': f"{price * 1.01:.2f}",
-            'volume': f"{np.random.randint(1000000, 10000000)}",
-            'amount': f"{np.random.randint(10000000, 100000000)}",
+            'open': f"{price * 0.98:.2f}",
+            'high': f"{price * 1.02:.2f}",
+            'low': f"{price * 0.97:.2f}",
+            'vol': np.random.randint(1000000, 10000000),
+            'amount': np.random.randint(10000000, 100000000),
             'time': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         }])
         

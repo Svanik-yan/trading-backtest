@@ -47,4 +47,13 @@ ENV/
 # Data files
 *.csv
 *.txt
-!requirements.txt 
+!requirements.txt
+!stock_list.txt
+
+# Streamlit
+.streamlit/
+
+# Local development
+*.db
+*.sqlite3
+.ipynb_checkpoints/ 

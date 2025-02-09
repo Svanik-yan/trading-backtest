@@ -40,6 +40,7 @@ def render_backtest_analysis():
             
         # 确保数据按日期排序
         data = data.sort_values('trade_date')
+        data.set_index('trade_date', inplace=True)
         
         # 准备策略参数
         strategy_params = {
@@ -76,16 +77,18 @@ def render_backtest_analysis():
                 return
                 
             # 计算关键指标
-            total_return = (results['equity_curve'][-1] / config['initial_capital'] - 1) * 100
-            annual_return = total_return * (252 / len(results['equity_curve']))
+            equity_curve = results['equity_curve']
+            final_equity = equity_curve.iloc[-1]  # 使用 iloc 访问最后一个元素
+            total_return = (final_equity / config['initial_capital'] - 1) * 100
+            annual_return = total_return * (252 / len(equity_curve))
             
             # 计算最大回撤
-            peak = results['equity_curve'].expanding(min_periods=1).max()
-            drawdown = (results['equity_curve'] - peak) / peak * 100
+            peak = equity_curve.expanding(min_periods=1).max()
+            drawdown = (equity_curve - peak) / peak * 100
             max_drawdown = drawdown.min()
             
             # 计算夏普比率
-            daily_returns = results['equity_curve'].pct_change().dropna()
+            daily_returns = equity_curve.pct_change().dropna()
             sharpe_ratio = np.sqrt(252) * (daily_returns.mean() / daily_returns.std()) if len(daily_returns) > 0 else 0
             
             # 显示关键指标
@@ -108,8 +111,8 @@ def render_backtest_analysis():
                               
             # 添加权益曲线
             fig.add_trace(
-                go.Scatter(x=results['equity_curve'].index,
-                          y=results['equity_curve'],
+                go.Scatter(x=equity_curve.index,
+                          y=equity_curve.values,
                           name="权益曲线",
                           line=dict(color='rgb(49,130,189)')),
                 row=1, col=1
@@ -118,7 +121,7 @@ def render_backtest_analysis():
             # 添加回撤曲线
             fig.add_trace(
                 go.Scatter(x=drawdown.index,
-                          y=drawdown,
+                          y=drawdown.values,
                           name="回撤",
                           fill='tozeroy',
                           line=dict(color='rgba(255,0,0,0.5)')),

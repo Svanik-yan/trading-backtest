@@ -9,14 +9,11 @@ def render_strategy_config():
     # 初始化数据加载器
     loader = DataLoader()
     
-    # 添加搜索框
-    search_text = st.text_input("搜索股票代码或名称", key="stock_search_strategy")
-    
-    # 获取股票列表并应用搜索过滤
-    stock_list = loader.load_stock_list(search_text)
+    # 获取股票列表
+    stock_list = loader.load_stock_list()
     
     if stock_list.empty:
-        st.warning("未找到匹配的股票")
+        st.warning("未找到股票数据")
         return
         
     # 创建表单
@@ -26,21 +23,24 @@ def render_strategy_config():
         col1, col2 = st.columns(2)
         
         with col1:
-            # 股票选择
+            # 股票选择，不设置默认值
             selected_stock = st.selectbox(
                 "选择股票",
-                options=stock_list['ts_code'].tolist(),
-                format_func=lambda x: f"{x} - {stock_list[stock_list['ts_code']==x]['name'].values[0]}"
+                options=[""] + stock_list['ts_code'].tolist(),
+                format_func=lambda x: "" if x == "" else f"{x} - {stock_list[stock_list['ts_code']==x]['name'].values[0]}"
             )
             
-            # 回测周期
+            # 回测周期 - 默认结束日期为今天，开始日期为一年前
+            today = datetime.now()
+            one_year_ago = today - timedelta(days=365)
+            
             start_date = st.date_input(
                 "开始日期",
-                value=datetime(2023, 1, 1)
+                value=one_year_ago
             )
             end_date = st.date_input(
                 "结束日期",
-                value=datetime(2023, 12, 31)
+                value=today
             )
         
         with col2:
@@ -170,7 +170,11 @@ def render_strategy_config():
         )
         
         if position_type == "固定手数":
-            fixed_volume = st.number_input("每次交易手数", min_value=1, value=1)
+            col_vol1, col_vol2 = st.columns([3, 1])
+            with col_vol1:
+                fixed_volume = st.number_input("每次交易手数", min_value=1, value=1)
+            with col_vol2:
+                is_full_position = st.checkbox("满仓", value=True)
         elif position_type == "固定资金":
             fixed_amount = st.number_input("每次交易金额", min_value=1000, value=10000)
         else:
@@ -237,7 +241,10 @@ def render_strategy_config():
             
             # 添加仓位管理参数
             if position_type == "固定手数":
-                strategy_config["position_params"] = {"fixed_volume": fixed_volume}
+                strategy_config["position_params"] = {
+                    "fixed_volume": fixed_volume,
+                    "is_full_position": is_full_position
+                }
             elif position_type == "固定资金":
                 strategy_config["position_params"] = {"fixed_amount": fixed_amount}
             else:

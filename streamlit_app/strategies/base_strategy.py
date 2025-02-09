@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 
 class BaseStrategy(ABC):
-    def __init__(self, data, initial_capital=1000000, commission_rate=0.0003, slippage=0.002):
+    def __init__(self, data, initial_capital=1000000, commission_rate=0.0003, slippage=0.002, price_type="收盘价", **kwargs):
         """
         初始化策略基类
         
@@ -12,11 +12,13 @@ class BaseStrategy(ABC):
             initial_capital (float): 初始资金
             commission_rate (float): 手续费率
             slippage (float): 滑点率
+            price_type (str): 交易价格类型，"收盘价"或"开盘价"
         """
         self.data = data
         self.initial_capital = initial_capital
         self.commission_rate = commission_rate
         self.slippage = slippage
+        self.price_type = price_type
         self.position = 0
         self.cash = initial_capital
         self.trades = []
@@ -124,7 +126,8 @@ class BaseStrategy(ABC):
         # 遍历每个交易日
         for i in range(1, len(self.data)):
             date = self.data.index[i]
-            price = self.data['close'].iloc[i]
+            # 根据设置选择使用开盘价或收盘价
+            price = self.data['open'].iloc[i] if self.price_type == "开盘价" else self.data['close'].iloc[i]
             
             # 获取目标仓位
             target_shares = int((signals.iloc[i] / 100) * self.cash / price)

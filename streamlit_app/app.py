@@ -42,23 +42,21 @@ with st.sidebar:
     selected = option_menu(
         menu_title="主菜单",
         options=[
-            "实时行情", 
-            "K线图表",
+            "实时行情（开发中）", 
             "策略配置",
+            "回测分析",
             "交易记录",
-            "绩效分析",
-            "回测分析"
+            "绩效分析"
         ],
         icons=[
             "graph-up",
-            "bar-chart-line",
             "gear",
+            "calculator",
             "journal-text",
-            "pie-chart",
-            "calculator"
+            "pie-chart"
         ],
         menu_icon="cast",
-        default_index=0,
+        default_index=1,  # 默认显示策略配置页面
         styles={
             "container": {"padding": "0!important", "background-color": "#fafafa"},
             "icon": {"color": "orange", "font-size": "25px"}, 
@@ -70,17 +68,16 @@ with st.sidebar:
 # 主页面内容
 st.title("股票策略回测系统")
 
-if selected == "实时行情":
-    from pages.realtime_quote import render_realtime_quote
-    render_realtime_quote()
-    
-elif selected == "K线图表":
-    from pages.kline_chart import render_kline_chart
-    render_kline_chart()
+if selected == "实时行情（开发中）":
+    st.info("实时行情模块正在开发中，敬请期待...")
     
 elif selected == "策略配置":
     from pages.strategy_config import render_strategy_config
     render_strategy_config()
+    
+elif selected == "回测分析":
+    from pages.backtest_analysis import render_backtest_analysis
+    render_backtest_analysis()
     
 elif selected == "交易记录":
     from pages.trade_records import render_trade_records
@@ -88,8 +85,4 @@ elif selected == "交易记录":
     
 elif selected == "绩效分析":
     from pages.performance_analysis import render_performance_analysis
-    render_performance_analysis()
-    
-elif selected == "回测分析":
-    from pages.backtest_analysis import render_backtest_analysis
-    render_backtest_analysis() 
+    render_performance_analysis() 

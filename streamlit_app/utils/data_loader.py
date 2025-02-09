@@ -170,7 +170,7 @@ class DataLoader:
                 df = df.rename(columns={'vol': 'volume'})
                 
                 # 转换日期格式
-                df['trade_date'] = pd.to_datetime(df['trade_date'])
+                df['trade_date'] = pd.to_datetime(df['trade_date'], format='%Y%m%d')
                 
                 # 按日期排序
                 df = df.sort_values('trade_date')

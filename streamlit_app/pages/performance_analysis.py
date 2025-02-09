@@ -49,74 +49,46 @@ def render_performance_analysis():
     st.title("绩效分析")
     
     if "strategy_config" not in st.session_state:
-        st.warning("请先在策略配置页面设置并运行策略")
+        st.warning("请先在策略配置页面设置交易策略")
+        return
+        
+    if "backtest_results" not in st.session_state:
+        st.warning("请先在回测分析页面运行策略")
         return
     
-    # 获取策略配置
+    # 获取策略配置和回测结果
     config = st.session_state["strategy_config"]
+    results = st.session_state["backtest_results"]
     
     # 显示策略信息
     st.subheader("策略信息")
-    st.info(f"股票: {config['stock_code']} | 策略: {config['strategy_type']} | 周期: {config['start_date']} 至 {config['end_date']}")
+    st.info(f"股票: {config['stock_code']} | 策略: {config['strategy_type']} | 周期: {config['start_date'].strftime('%Y-%m-%d')} 至 {config['end_date'].strftime('%Y-%m-%d')}")
     
-    # 加载数据并运行策略
     try:
-        loader = DataLoader()
-        stock_code = config['stock_code'].split('.')[0]
-        data = loader.load_daily_data(stock_code)
-        
-        if data is None or data.empty:
-            st.error("无法加载股票数据，请检查股票代码是否正确")
-            return
-            
-        # 确保数据按日期排序
-        data = data.sort_values('trade_date')
-        data.set_index('trade_date', inplace=True)
-        
-        # 准备策略参数
-        strategy_params = {
-            'initial_capital': config['initial_capital'],
-            'commission_rate': config['commission_rate'],
-            'slippage': config['slippage'],
-            'price_type': config['price_type']
-        }
-        
-        # 添加特定策略的参数
-        if 'strategy_params' in config:
-            strategy_params.update(config['strategy_params'])
-            
-        # 添加仓位管理参数
-        if 'position_params' in config:
-            strategy_params.update(config['position_params'])
-            
-        # 添加交易条件
-        strategy_params['buy_conditions'] = config.get('buy_conditions', {})
-        strategy_params['sell_conditions'] = config.get('sell_conditions', {})
-        
-        # 创建并运行策略
-        strategy = create_strategy(
-            config['strategy_type'],
-            data,
-            **strategy_params
-        )
-        
-        results = strategy.run_backtest()
-        
         if not results or 'equity_curve' not in results:
             st.error("策略回测未返回有效结果")
             return
             
-        # 计算每日收益率
+        # 计算关键指标
         equity_curve = results['equity_curve']
-        returns = equity_curve.pct_change().fillna(0)
+        final_equity = equity_curve.iloc[-1]
+        total_return = (final_equity / config['initial_capital'] - 1) * 100
+        annual_return = total_return * (252 / len(equity_curve))
         
-        # 计算绩效指标
-        metrics = calculate_performance_metrics(returns)
+        # 计算最大回撤
+        peak = equity_curve.expanding(min_periods=1).max()
+        drawdown = (equity_curve - peak) / peak * 100
+        max_drawdown = drawdown.min()
         
-        # 显示绩效指标
+        # 计算夏普比率
+        daily_returns = equity_curve.pct_change().dropna()
+        sharpe_ratio = np.sqrt(252) * (daily_returns.mean() / daily_returns.std()) if len(daily_returns) > 0 else 0
+        
+        # 显示关键指标
         st.subheader("绩效指标")
         col1, col2, col3 = st.columns(3)
         
+        metrics = calculate_performance_metrics(daily_returns)
         metrics_list = list(metrics.items())
         for i, (metric, value) in enumerate(metrics_list):
             with [col1, col2, col3][i % 3]:
@@ -126,7 +98,7 @@ def render_performance_analysis():
         st.subheader("月度收益热力图")
         
         # 计算月度收益
-        monthly_returns = returns.groupby([returns.index.year, returns.index.month]).sum()
+        monthly_returns = daily_returns.groupby([daily_returns.index.year, daily_returns.index.month]).sum()
         monthly_returns_matrix = monthly_returns.unstack()
         
         # 创建热力图
@@ -162,9 +134,9 @@ def render_performance_analysis():
         
         # 添加滚动收益率
         for window in windows:
-            rolling_returns = returns.rolling(window).mean() * 252
+            rolling_returns = daily_returns.rolling(window).mean() * 252
             fig.add_trace(
-                go.Scatter(x=returns.index, y=rolling_returns,
+                go.Scatter(x=daily_returns.index, y=rolling_returns,
                           name=f'{window}日滚动收益率',
                           line=dict(width=1)),
                 row=1, col=1
@@ -172,9 +144,9 @@ def render_performance_analysis():
         
         # 添加滚动波动率
         for window in windows:
-            rolling_vol = returns.rolling(window).std() * np.sqrt(252)
+            rolling_vol = daily_returns.rolling(window).std() * np.sqrt(252)
             fig.add_trace(
-                go.Scatter(x=returns.index, y=rolling_vol,
+                go.Scatter(x=daily_returns.index, y=rolling_vol,
                           name=f'{window}日滚动波动率',
                           line=dict(width=1)),
                 row=2, col=1
@@ -182,11 +154,11 @@ def render_performance_analysis():
         
         # 添加滚动夏普比率
         for window in windows:
-            rolling_returns = returns.rolling(window).mean() * 252
-            rolling_vol = returns.rolling(window).std() * np.sqrt(252)
+            rolling_returns = daily_returns.rolling(window).mean() * 252
+            rolling_vol = daily_returns.rolling(window).std() * np.sqrt(252)
             rolling_sharpe = (rolling_returns - 0.03) / rolling_vol
             fig.add_trace(
-                go.Scatter(x=returns.index, y=rolling_sharpe,
+                go.Scatter(x=daily_returns.index, y=rolling_sharpe,
                           name=f'{window}日滚动夏普比率',
                           line=dict(width=1)),
                 row=3, col=1
@@ -203,8 +175,8 @@ def render_performance_analysis():
         var_data = []
         
         for level in confidence_levels:
-            var = np.percentile(returns, (1 - level) * 100)
-            cvar = returns[returns <= var].mean()
+            var = np.percentile(daily_returns, (1 - level) * 100)
+            cvar = daily_returns[daily_returns <= var].mean()
             var_data.append({
                 "置信水平": f"{level:.0%}",
                 "VaR": f"{-var:.2%}",

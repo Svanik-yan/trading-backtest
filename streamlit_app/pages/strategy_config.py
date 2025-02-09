@@ -320,7 +320,14 @@ def render_strategy_config():
             
             # 将配置保存到session state
             st.session_state["strategy_config"] = strategy_config
-            st.success("策略配置已保存，请前往回测分析页面查看结果")
+            
+            # 设置跳转标志
+            st.session_state["should_redirect"] = True
+            st.session_state["redirect_page"] = "回测分析"
+            
+            # 显示成功消息并自动跳转
+            st.success("策略配置已保存，正在跳转到回测分析页面...")
+            st.experimental_rerun()
             
     # 在底部添加免责声明
     st.markdown("---")

@@ -37,6 +37,15 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+# 处理页面跳转
+if "should_redirect" in st.session_state and st.session_state["should_redirect"]:
+    selected_page = st.session_state["redirect_page"]
+    # 清除跳转标志
+    st.session_state["should_redirect"] = False
+    del st.session_state["redirect_page"]
+else:
+    selected_page = "策略配置"
+
 # 侧边栏导航
 with st.sidebar:
     selected = option_menu(
@@ -56,7 +65,7 @@ with st.sidebar:
             "pie-chart"
         ],
         menu_icon="cast",
-        default_index=1,  # 默认显示策略配置页面
+        default_index=1 if selected_page == "策略配置" else 2,  # 根据跳转状态设置默认页面
         styles={
             "container": {"padding": "0!important", "background-color": "#fafafa"},
             "icon": {"color": "orange", "font-size": "25px"}, 

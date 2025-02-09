@@ -264,28 +264,13 @@ def render_trades_tab(results, config):
                 name="卖出"
             ))
         
-        # 添加成交量图表
-        fig.add_trace(go.Bar(
-            x=stock_data.index,
-            y=stock_data['volume'],
-            name="成交量",
-            yaxis="y2",
-            marker_color=np.where(stock_data['close'] >= stock_data['open'], 'red', 'green')
-        ))
-        
         # 更新布局
         fig.update_layout(
-            height=800,
+            height=600,
             yaxis=dict(
                 title="价格",
                 side="left",
                 showgrid=True
-            ),
-            yaxis2=dict(
-                title="成交量",
-                side="right",
-                overlaying="y",
-                showgrid=False
             ),
             xaxis=dict(
                 title="日期",

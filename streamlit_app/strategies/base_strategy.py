@@ -125,7 +125,9 @@ class BaseStrategy(ABC):
         运行回测
         
         返回:
-            dict: 包含回测结果的字典
+            dict: 包含回测结果的字典，包括:
+                - equity_curve: 权益曲线
+                - trades: 交易记录列表
         """
         # 生成交易信号
         signals = self.generate_signals()
@@ -164,6 +166,10 @@ class BaseStrategy(ABC):
                 price_change = price - prev_price
                 position_profit = self.position * price_change
                 self.trades[-1]['profit'] += position_profit
+        
+        # 确保交易记录不为空
+        if not self.trades:
+            self.trades = []  # 确保返回空列表而不是None
         
         return {
             'equity_curve': equity_curve,

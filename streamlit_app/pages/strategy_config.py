@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime, timedelta
 from utils.data_loader import DataLoader
+from strategies.implementations import create_strategy
 
 def render_strategy_config():
     st.title("策略配置")

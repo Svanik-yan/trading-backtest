@@ -11,56 +11,19 @@ def render_trade_records():
     if "strategy_config" not in st.session_state:
         st.warning("请先在策略配置页面设置并运行策略")
         return
+        
+    if "backtest_results" not in st.session_state:
+        st.warning("请先在回测分析页面运行策略")
+        return
     
-    # 获取策略配置
+    # 获取策略配置和回测结果
     config = st.session_state["strategy_config"]
+    results = st.session_state["backtest_results"]
     
     try:
         # 显示策略信息
         st.subheader("策略信息")
         st.info(f"股票: {config['stock_code']} | 策略: {config['strategy_type']} | 周期: {config['start_date'].strftime('%Y-%m-%d')} 至 {config['end_date'].strftime('%Y-%m-%d')}")
-        
-        # 加载数据并运行策略获取交易记录
-        loader = DataLoader()
-        stock_code = config['stock_code'].split('.')[0]
-        data = loader.load_daily_data(stock_code)
-        
-        if data is None or data.empty:
-            st.error("无法加载股票数据，请检查股票代码是否正确")
-            return
-            
-        # 确保数据按日期排序
-        data = data.sort_values('trade_date')
-        data.set_index('trade_date', inplace=True)
-        
-        # 准备策略参数
-        strategy_params = {
-            'initial_capital': config['initial_capital'],
-            'commission_rate': config['commission_rate'],
-            'slippage': config['slippage'],
-            'price_type': config['price_type']
-        }
-        
-        # 添加特定策略的参数
-        if 'strategy_params' in config:
-            strategy_params.update(config['strategy_params'])
-            
-        # 添加仓位管理参数
-        if 'position_params' in config:
-            strategy_params.update(config['position_params'])
-            
-        # 添加交易条件
-        strategy_params['buy_conditions'] = config.get('buy_conditions', {})
-        strategy_params['sell_conditions'] = config.get('sell_conditions', {})
-        
-        # 创建并运行策略
-        strategy = create_strategy(
-            config['strategy_type'],
-            data,
-            **strategy_params
-        )
-        
-        results = strategy.run_backtest()
         
         if not results or 'trades' not in results or not results['trades']:
             st.warning("没有找到交易记录")

@@ -246,6 +246,10 @@ def render_strategy_config():
             submitted = st.form_submit_button("开始回测", use_container_width=True)
             
         if submitted:
+            # 清除旧的回测结果
+            if "backtest_results" in st.session_state:
+                del st.session_state["backtest_results"]
+                
             # 保存策略配置
             strategy_config = {
                 "stock_code": selected_stock,
@@ -314,7 +318,38 @@ def render_strategy_config():
             
             # 将配置保存到session state
             st.session_state["strategy_config"] = strategy_config
-            st.success("策略配置已保存，请前往回测分析页面查看结果")
+            
+            # 立即运行回测
+            try:
+                # 加载股票数据
+                stock_data = loader.load_daily_data(selected_stock.split('.')[0])
+                
+                if stock_data is None or stock_data.empty:
+                    st.error("无法加载股票数据，请检查股票代码是否正确")
+                    return
+                    
+                # 确保数据按日期排序
+                stock_data = stock_data.sort_values('trade_date')
+                stock_data.set_index('trade_date', inplace=True)
+                
+                # 创建并运行策略
+                strategy = create_strategy(
+                    strategy_type,
+                    stock_data,
+                    **{k: v for k, v in strategy_config.items() if k not in ['strategy_type', 'stock_code', 'start_date', 'end_date']}
+                )
+                
+                # 运行回测
+                results = strategy.run_backtest()
+                
+                # 保存回测结果到session state
+                st.session_state["backtest_results"] = results
+                
+                st.success("策略配置已保存并完成回测，请前往回测分析页面查看结果")
+                
+            except Exception as e:
+                st.error(f"运行回测时发生错误: {str(e)}")
+                st.exception(e)
             
     # 在底部添加免责声明
     st.markdown("---")

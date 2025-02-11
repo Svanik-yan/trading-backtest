@@ -187,121 +187,6 @@ def render_trades_tab(results, config):
         
     trades = pd.DataFrame(results['trades'])
     
-    # 加载股票数据用于绘制K线图
-    loader = DataLoader()
-    stock_data = loader.load_daily_data(config['stock_code'].split('.')[0])
-    
-    if stock_data is not None and not stock_data.empty:
-        # 确保数据按日期排序
-        stock_data = stock_data.sort_values('trade_date')
-        stock_data.set_index('trade_date', inplace=True)
-        
-        # 计算MA5和MA20
-        stock_data['MA5'] = stock_data['close'].rolling(window=5).mean()
-        stock_data['MA20'] = stock_data['close'].rolling(window=20).mean()
-        
-        # 创建K线图
-        st.subheader("交易K线图")
-        
-        # 创建子图
-        fig = make_subplots(rows=2, cols=1, 
-                            shared_xaxes=True,
-                            vertical_spacing=0.03,
-                            row_heights=[0.7, 0.3])
-        
-        # 添加K线数据
-        fig.add_trace(go.Candlestick(
-            x=stock_data.index,
-            open=stock_data['open'],
-            high=stock_data['high'],
-            low=stock_data['low'],
-            close=stock_data['close'],
-            name="K线",
-            increasing_line_color='red',  # 上涨为红色
-            decreasing_line_color='green'  # 下跌为绿色
-        ), row=1, col=1)
-        
-        # 添加MA5
-        fig.add_trace(go.Scatter(
-            x=stock_data.index,
-            y=stock_data['MA5'],
-            name="MA5",
-            line=dict(color='blue', width=1)
-        ), row=1, col=1)
-        
-        # 添加MA20
-        fig.add_trace(go.Scatter(
-            x=stock_data.index,
-            y=stock_data['MA20'],
-            name="MA20",
-            line=dict(color='purple', width=1)
-        ), row=1, col=1)
-        
-        # 添加买入点
-        buy_trades = trades[trades['type'] == '买入']
-        if not buy_trades.empty:
-            fig.add_trace(go.Scatter(
-                x=pd.to_datetime(buy_trades['date']),
-                y=buy_trades['price'],
-                mode='markers',
-                marker=dict(
-                    symbol='triangle-up',
-                    size=12,
-                    color='red',
-                    line=dict(width=2)
-                ),
-                name="买入"
-            ), row=1, col=1)
-        
-        # 添加卖出点
-        sell_trades = trades[trades['type'] == '卖出']
-        if not sell_trades.empty:
-            fig.add_trace(go.Scatter(
-                x=pd.to_datetime(sell_trades['date']),
-                y=sell_trades['price'],
-                mode='markers',
-                marker=dict(
-                    symbol='triangle-down',
-                    size=12,
-                    color='green',
-                    line=dict(width=2)
-                ),
-                name="卖出"
-            ), row=1, col=1)
-        
-        # 添加成交量图表
-        fig.add_trace(go.Bar(
-            x=stock_data.index,
-            y=stock_data['volume'],
-            name="成交量",
-            marker_color=np.where(stock_data['close'] >= stock_data['open'], 'red', 'green')
-        ), row=2, col=1)
-        
-        # 更新布局
-        fig.update_layout(
-            height=800,
-            showlegend=True,
-            xaxis_rangeslider_visible=False,  # 禁用K线图的滑块
-            xaxis2_rangeslider_visible=True,  # 启用成交量图的滑块
-        )
-        
-        # 更新Y轴标题
-        fig.update_yaxes(title_text="价格", row=1, col=1)
-        fig.update_yaxes(title_text="成交量", row=2, col=1)
-        
-        # 更新图例位置
-        fig.update_layout(
-            legend=dict(
-                yanchor="top",
-                y=0.99,
-                xanchor="left",
-                x=0.01
-            )
-        )
-        
-        # 显示图表
-        st.plotly_chart(fig, use_container_width=True)
-    
     # 交易统计
     st.subheader("交易统计")
     col1, col2, col3, col4 = st.columns(4)
@@ -367,28 +252,6 @@ def render_trades_tab(results, config):
     # 格式化数据用于显示
     display_trades = filtered_trades.copy()
     
-    # 添加样式
-    st.markdown("""
-    <style>
-    [data-testid="stDataFrame"] td:nth-child(1) {
-        font-weight: bold;
-    }
-    [data-testid="stDataFrame"] td:nth-child(1):contains("买入") {
-        color: #ff4b4b !important;
-    }
-    [data-testid="stDataFrame"] td:nth-child(1):contains("卖出") {
-        color: #00c853 !important;
-    }
-    [data-testid="stDataFrame"] td {
-        text-align: right;
-    }
-    [data-testid="stDataFrame"] th {
-        text-align: center;
-        background-color: #f0f2f6;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-    
     # 重命名列以匹配所需格式
     display_trades = display_trades.rename(columns={
         'date': '交易时间',
@@ -396,100 +259,33 @@ def render_trades_tab(results, config):
         'price': '价格',
         'volume': '数量',
         'amount': '金额',
-        'profit': '收益率'
+        'profit': '收益'
     })
     
     # 格式化数据
     display_trades['交易时间'] = pd.to_datetime(display_trades['交易时间']).dt.strftime('%Y-%m-%d %H:%M:%S')
     display_trades['价格'] = display_trades['价格'].apply(lambda x: f"{x:.2f}")
-    display_trades['数量'] = display_trades['数量'].astype(int)  # 确保数量为整数
+    display_trades['数量'] = display_trades['数量'].astype(int)
     display_trades['金额'] = display_trades['金额'].apply(lambda x: f"¥{x:,.2f}")
-    
-    # 计算收益率和总资产
-    current_equity = config['initial_capital']
-    prev_equity = current_equity  # 初始化前一次的总资产
-    
-    for idx, row in display_trades.iterrows():
-        amount = float(row['金额'].replace('¥', '').replace(',', ''))
-        if row['交易类型'] == '买入':
-            current_equity -= amount
-            profit = 0
-        else:  # 卖出
-            current_equity += amount
-            profit = amount - float(filtered_trades.iloc[idx]['amount'])  # 使用原始数据计算收益
-        
-        # 计算增长率
-        growth_rate = ((current_equity - prev_equity) / prev_equity * 100) if prev_equity != 0 else 0.0
-        display_trades.at[idx, '增长率'] = growth_rate
-        
-        # 更新总资产和前一次总资产
-        display_trades.at[idx, '总资产'] = current_equity
-        display_trades.at[idx, 'profit'] = profit  # 保存收益用于后续计算
-        prev_equity = current_equity  # 更新前一次总资产
-    
-    # 格式化收益率、增长率和总资产显示
-    display_trades['收益率'] = display_trades.apply(
-        lambda row: f"{(row['profit'] / float(row['金额'].replace('¥', '').replace(',', '')) * 100):.2f}%" if row['交易类型'] == '卖出' else "0.00%",
-        axis=1
-    )
-    display_trades['增长率'] = display_trades['增长率'].apply(lambda x: f"{x:.2f}%" if pd.notnull(x) else "0.00%")
-    display_trades['总资产'] = display_trades['总资产'].apply(lambda x: f"¥{x:,.2f}")
-    
-    # 删除临时的profit列
-    display_trades = display_trades.drop('profit', axis=1)
+    display_trades['收益'] = display_trades['收益'].apply(lambda x: f"¥{x:,.2f}")
     
     # 设置列顺序
-    columns_order = ['交易类型', '价格', '数量', '金额', '收益率', '增长率', '总资产', '交易时间']
+    columns_order = ['交易类型', '价格', '数量', '金额', '收益', '交易时间']
     display_trades = display_trades[columns_order]
     
-    # 使用st.dataframe显示表格，添加样式
+    # 显示表格
     st.dataframe(
         display_trades,
         use_container_width=True,
-        hide_index=True,
-        column_config={
-            "交易类型": st.column_config.Column(
-                width="small",
-                help="买入或卖出交易",
-            ),
-            "价格": st.column_config.NumberColumn(
-                width="small",
-                help="交易价格",
-                format="%.2f"
-            ),
-            "数量": st.column_config.NumberColumn(
-                width="medium",
-                help="交易数量",
-                format=None  # 移除格式化，使用原始整数
-            ),
-            "金额": st.column_config.NumberColumn(
-                width="medium",
-                help="交易金额",
-                format="¥%,.2f"
-            ),
-            "收益率": st.column_config.Column(
-                width="small",
-                help="交易收益率"
-            ),
-            "增长率": st.column_config.Column(
-                width="small",
-                help="总资产增长率"
-            ),
-            "总资产": st.column_config.NumberColumn(
-                width="medium",
-                help="交易后总资产",
-                format="¥%,.2f"
-            ),
-            "交易时间": st.column_config.DatetimeColumn(
-                width="medium",
-                help="交易发生时间",
-                format="YYYY-MM-DD HH:mm:ss"
-            )
-        }
+        hide_index=True
     )
 
 def render_performance_tab(results, config):
     """渲染绩效分析选项卡"""
+    if not results.get('equity_curve') is not None:
+        st.warning("没有找到权益曲线数据")
+        return
+        
     equity_curve = results['equity_curve']
     daily_returns = equity_curve.pct_change().dropna()
     

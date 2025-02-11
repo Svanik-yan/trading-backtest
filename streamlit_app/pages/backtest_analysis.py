@@ -282,7 +282,7 @@ def render_trades_tab(results, config):
 
 def render_performance_tab(results, config):
     """渲染绩效分析选项卡"""
-    if not results.get('equity_curve') is not None:
+    if 'equity_curve' not in results:
         st.warning("没有找到权益曲线数据")
         return
         
